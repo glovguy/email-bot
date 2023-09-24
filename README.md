@@ -1,1 +1,1 @@
-# email-agent
+# email-bot
