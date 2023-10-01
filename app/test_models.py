@@ -18,7 +18,7 @@ class TestEmailModel(unittest.TestCase):
     def test_email_parsing(self):
         # Given: A raw email string and its UID
         email_uid = "123-foo"
-        raw_email = """MIME-Version: 1.0
+        raw_email = { b'BODY[]': """MIME-Version: 1.0
 Subject: this is the subject of the email
 From: Gmail Team <some_expected_sender@example.com>
 To: John Smith <test@example.com>
@@ -35,7 +35,7 @@ Content-Transfer-Encoding: quoted-printable
 
 <!DOCTYPE html><html><head><meta=
 /><title>this is the subject of the email</title></head><b=
-ody>foo</body></html=>"""
+ody>foo</body></html=>""" }
 
         # When: We use the from_raw_email method
         email = Email.from_raw_email(raw_email, email_uid, self.session)

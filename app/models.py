@@ -1,5 +1,5 @@
 from pyzmail import PyzMessage
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
 
@@ -25,7 +25,6 @@ class Email(Base):
     def from_raw_email(raw_email, email_uid, session: Session):
         """Parse a raw email and return an instance of the Email model."""
         message = PyzMessage.factory(raw_email[b'BODY[]'])
-        
         email_instance = Email(
             sender=message.get_address('from')[1],
             subject=message.get_subject(),
@@ -33,7 +32,6 @@ class Email(Base):
             uid=email_uid,
             # parent_id logic, if applicable, goes here
         )
-
         session.add(email_instance)
         session.commit()
         
