@@ -1,9 +1,36 @@
 from imapclient import IMAPClient
 from decouple import config
+from sqlalchemy.orm import Session
+from models import Email
+
+class EmailInbox:
+    def __init__(self):
+        self.email_session = EmailSession()
+
+    def fetch_unread_emails(self, session: Session):
+        """Fetch unread emails from the inbox."""
+        server = self.email_session.connect()
+        try:
+            server.select_folder('INBOX')
+            # Search for unread emails
+            email_ids = server.search(['UNSEEN'])
+            if not email_ids:
+                return []
+
+            print("Fetching ", len(email_ids), " unread emails.")
+            # Fetch emails based on IDs
+            raw_emails = server.fetch(email_ids, ['BODY[]'])
+            print("raw_emails: ", raw_emails.values())
+            emails = [Email.from_raw_email(raw_emails[email_uid], email_uid, session) for email_uid in raw_emails]
+
+            return emails
+
+        finally:
+            self.email_session.disconnect()
 
 class EmailSession:
     def __init__(self):
-        self.server = None 
+        self.server = None
 
     def connect(self):
         """Connects to the email server using IMAP."""
@@ -21,5 +48,4 @@ class EmailSession:
         """Disconnect from the server."""
         if self.server:
             self.server.logout()
-            self.server.shutdown()
             print("Successfully disconnected from the email server.")

@@ -1,10 +1,11 @@
 import pytest
 import unittest
 from unittest.mock import Mock, patch
-from app.email_session import EmailSession
 import imapclient
+from app.email_session import EmailSession
 
 class TestEmailSession(unittest.TestCase):
+
     def test_email_connection_success(self):
         """Test successful connection to the IMAP server."""
         with patch("app.email_session.IMAPClient", autospec=True) as mock_imap:

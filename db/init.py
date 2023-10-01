@@ -14,6 +14,7 @@ def setup_database():
         content TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         parent_id INTEGER,
+        uid INTEGER NOT NULL,
         FOREIGN KEY (parent_id) REFERENCES emails(id)
     )
     ''')
