@@ -38,13 +38,14 @@ Content-Transfer-Encoding: quoted-printable
 ody>foo</body></html=>""" }
 
         # When: We use the from_raw_email method
-        email = Email.from_raw_email(raw_email, email_uid, self.session)
+        email = Email.from_raw_email(raw_email, email_uid, 321)
 
         # Then: The email should be correctly parsed
         self.assertEqual(email.sender, 'some_expected_sender@example.com')
         self.assertEqual(email.subject, 'this is the subject of the email')
         self.assertEqual(email.content, 'foo bar baz')
         self.assertEqual(email.uid, email_uid)
+        self.assertEqual(email.user_id, 321)
 
     def test_insert_email(self):
         # Given: Some email data
@@ -52,7 +53,8 @@ ody>foo</body></html=>""" }
             'sender': 'test@example.com',
             'subject': 'Test Email',
             'content': 'This is a test email content',
-            'parent_id': None
+            'parent_id': None,
+            'user_id': 123,
         }
 
         # When: We create an Email object and add it to the session
@@ -64,6 +66,8 @@ ody>foo</body></html=>""" }
         retrieved_email = self.session.query(Email).filter_by(sender='test@example.com').first()
         self.assertIsNotNone(retrieved_email)
         self.assertEqual(retrieved_email.subject, 'Test Email')
+        self.assertEqual(retrieved_email.content, 'This is a test email content')
+        self.assertEqual(retrieved_email.user_id, 123)
 
 if __name__ == '__main__':
     unittest.main()

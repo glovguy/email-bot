@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.email_inbox import EmailInbox, EmailSession
-from app.models import Email
+from app.models import Email, User, db_session
 
 class TestEmailInbox(unittest.TestCase):
 
@@ -36,10 +36,14 @@ class TestEmailInbox(unittest.TestCase):
             Email(sender='foo@example.com', subject='My Favorite Subject 2', content='Email 2 Content', uid='2'),
             Email(sender='foo@example.com', subject='My Favorite Subject 3', content='Email 3 Content', uid='3')
         ]
+        # And that there is a user
+        user = User(name='Foo Bar', email_address="test@example.com")
+        self.session.add(user)
+        self.session.commit()
 
         # When we fetch unread emails
-        email_inbox = EmailInbox()
-        emails = email_inbox.fetch_unread_emails(self.session)
+        email_inbox = EmailInbox(user.id)
+        emails = email_inbox.fetch_unread_emails()
 
         # Then we should get 3 emails
         self.assertEqual(len(emails), 3)
@@ -52,10 +56,14 @@ class TestEmailInbox(unittest.TestCase):
         mock_connect.return_value = mock_server
         # Mock the search method to return empty list (no emails)
         mock_server.search.return_value = []
+        # And that there is a user
+        user = User(name='Foo Bar', email_address="test@example.com")
+        self.session.add(user)
+        self.session.commit()
 
         # When we fetch unread emails
-        email_inbox = EmailInbox()
-        emails = email_inbox.fetch_unread_emails(self.session)
+        email_inbox = EmailInbox(user.id)
+        emails = email_inbox.fetch_unread_emails()
 
         # Then we should get an empty list
         self.assertEqual(len(emails), 0)
