@@ -1,4 +1,4 @@
-from app.models import User, db_session
+from models import User, db_session
 
 class Authorization:
     @staticmethod

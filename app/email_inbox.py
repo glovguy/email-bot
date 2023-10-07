@@ -1,32 +1,34 @@
 from imapclient import IMAPClient
 from decouple import config
-# from sqlalchemy.orm import Session
 from models import Email, User
+from authorization import Authorization
 
 UNREAD = ['UNSEEN']
 
 class EmailInbox:
-    def __init__(self, user_id):
+    def __init__(self):
         self.email_session = EmailSession()
-        self.user = User.query.get(user_id)
 
     def fetch_unread_emails(self):
         """Fetch unread emails from the inbox."""
         server = self.email_session.connect()
         try:
             server.select_folder('INBOX')
-            # Search for unread emails
             email_ids = server.search(UNREAD)
             if not email_ids:
                 return []
 
             raw_emails = server.fetch(email_ids, ['BODY[]'])
-            emails = [Email.from_raw_email(raw_emails[email_uid], email_uid, self.user.id) for email_uid in raw_emails]
+            emails = [Email.from_raw_email(raw_emails[email_uid], email_uid) for email_uid in raw_emails]
 
             return emails
 
         finally:
             self.email_session.disconnect()
+
+    def send_response(self, recipient_email, subject, message):
+        return self.email_session.send_email(recipient_email, subject, message)
+
 
 class EmailSession:
     def __init__(self):

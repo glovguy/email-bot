@@ -42,7 +42,7 @@ class TestEmailInbox(unittest.TestCase):
         self.session.commit()
 
         # When we fetch unread emails
-        email_inbox = EmailInbox(user.id)
+        email_inbox = EmailInbox()
         emails = email_inbox.fetch_unread_emails()
 
         # Then we should get 3 emails
@@ -62,7 +62,7 @@ class TestEmailInbox(unittest.TestCase):
         self.session.commit()
 
         # When we fetch unread emails
-        email_inbox = EmailInbox(user.id)
+        email_inbox = EmailInbox()
         emails = email_inbox.fetch_unread_emails()
 
         # Then we should get an empty list
@@ -90,3 +90,13 @@ class TestEmailInbox(unittest.TestCase):
 
         self.assertTrue("Unable to connect to the server" in str(context.exception))
         email_session.disconnect()  # Always ensure disconnect
+
+    @patch('app.email_inbox.EmailSession')
+    def test_send_response(self, mock_email_session):
+        # Mock the send response function in EmailSession
+        mock_email_session.send_email.return_value = True
+
+        email_inbox = EmailInbox()
+        status = email_inbox.send_response("karlsmith@bouzou.com", "Subject", "This is a test response.")
+
+        self.assertTrue(status)
