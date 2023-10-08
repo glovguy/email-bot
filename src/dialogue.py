@@ -1,6 +1,6 @@
-from openai_client import OpenAIClient
-from email_inbox import EmailInbox
-from authorization import Authorization
+from src.openai_client import OpenAIClient
+from src.email_inbox import EmailInbox
+from src.authorization import Authorization
 
 class Dialogue:
 
@@ -22,8 +22,12 @@ class Dialogue:
         if not Authorization.is_authorized(email.sender):
             return None
 
-        response = self.openai_client.send_message(email.content)
+        chatMessages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": email.content}
+        ]
+        response = self.openai_client.send_message(chatMessages)
         
-        self.email_inbox.send_response(email.sender, "Re: " + email.subject, response)
+        self.email_inbox.send_response(email, response)
 
         return response

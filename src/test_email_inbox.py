@@ -1,9 +1,9 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.email_inbox import EmailInbox, EmailSession
-from app.models import Email, User, db_session
+from src.email_inbox import EmailInbox, EmailSession, EMAIL_ADDRESS
+from src.models import Email, User, db_session
 
 class TestEmailInbox(unittest.TestCase):
 
@@ -17,7 +17,7 @@ class TestEmailInbox(unittest.TestCase):
     def tearDown(self):
         self.session.close()
 
-    @patch('models.Email.from_raw_email')
+    @patch('src.models.Email.from_raw_email')
     @patch.object(EmailSession, 'connect')
     def test_fetch_unread_emails_success(self, mock_connect, mock_from_raw_email):
         """Test fetching unread emails successfully."""
@@ -31,11 +31,11 @@ class TestEmailInbox(unittest.TestCase):
             '2': {b'BODY[]': b'Email 2 Content'},
             '3': {b'BODY[]': b'Email 3 Content'},
         }
-        mock_from_raw_email.side_effect = [
+        mock_from_raw_email.side_effect = iter([
             Email(sender='foo@example.com', subject='My Favorite Subject 1', content='Email 1 Content', uid='1'),
             Email(sender='foo@example.com', subject='My Favorite Subject 2', content='Email 2 Content', uid='2'),
             Email(sender='foo@example.com', subject='My Favorite Subject 3', content='Email 3 Content', uid='3')
-        ]
+        ])
         # And that there is a user
         user = User(name='Foo Bar', email_address="test@example.com")
         self.session.add(user)
@@ -70,7 +70,7 @@ class TestEmailInbox(unittest.TestCase):
 
     def test_email_connection_success(self):
         """Test successful connection to the IMAP server."""
-        with patch("app.email_inbox.IMAPClient", autospec=True) as mock_imap:
+        with patch("src.email_inbox.IMAPClient", autospec=True) as mock_imap:
             mock_server = Mock()
             mock_server.login.return_value = True
             mock_imap.return_value = mock_server
@@ -78,7 +78,7 @@ class TestEmailInbox(unittest.TestCase):
             connection = EmailSession()
             assert connection.connect()
 
-    @patch('app.email_inbox.IMAPClient')
+    @patch('src.email_inbox.IMAPClient')
     def test_email_connection_failure(self, MockIMAPClient):
         """Test the connection failure scenario."""
         MockIMAPClient.side_effect = Exception("Unable to connect to the server")
@@ -91,12 +91,26 @@ class TestEmailInbox(unittest.TestCase):
         self.assertTrue("Unable to connect to the server" in str(context.exception))
         email_session.disconnect()  # Always ensure disconnect
 
-    @patch('app.email_inbox.EmailSession')
-    def test_send_response(self, mock_email_session):
-        # Mock the send response function in EmailSession
-        mock_email_session.send_email.return_value = True
+    @patch('src.email_inbox.MIMEText')
+    @patch('src.email_inbox.EmailSession')
+    def test_send_response(self, mock_email_session, mock_mime_text):
+        # Mock the send response function in EmailSession using MagicMock
+        mock_server_module = MagicMock()
+        mock_server = Mock()
+        mock_server_module.__enter__.return_value = mock_server
+        mock_mime_message = MagicMock()
+        mock_mime_text.return_value = mock_mime_message
+        mock_mime_message.as_string.return_value = "123456789"
+        
+        # Set up return_value or side_effect as needed for the mock_server methods
+        mock_server.sendmail.return_value = None  # Or any other suitable return value
+
+        # Mock the instance of EmailSession
+        mock_email_session_instance = mock_email_session.return_value
+        mock_email_session_instance.connect_smtp.return_value = mock_server_module
 
         email_inbox = EmailInbox()
-        status = email_inbox.send_response("karlsmith@bouzou.com", "Subject", "This is a test response.")
-
-        self.assertTrue(status)
+        email = Email(sender="foo@example.com", subject="Test Email", content="This is a test email.")
+        email_inbox.send_response(email, "This is a test response.")
+        
+        mock_server.sendmail.assert_called_with(EMAIL_ADDRESS, ["foo@example.com"], "123456789")

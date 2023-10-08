@@ -1,4 +1,4 @@
-import app.models
+import src.models
 
 if __name__ == "__main__":
-    app.models.init_db()
+    src.models.init_db()

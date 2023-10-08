@@ -1,9 +1,9 @@
 from pyzmail import PyzMessage
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Session, scoped_session, sessionmaker
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 
-DATABASE_URL = "sqlite:///../email_bot.db"
+DATABASE_URL = "sqlite:///email_bot.db"
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
@@ -35,7 +35,7 @@ class Email(Base):
         """Parse a raw email and return an instance of the Email model."""
         message = PyzMessage.factory(raw_email[b'BODY[]'])
         sender_user = User.query.filter_by(email_address=message.get_address('from')[1]).first()
-        print('sender_user: ',sender_user)
+        
         email_instance = Email(
             sender=message.get_address('from')[1],
             subject=message.get_subject(),

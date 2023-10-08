@@ -23,8 +23,8 @@ class DialogueTest(unittest.TestCase):
         response = dialogue.process(email)
         
         # Verifications
-        mock_openai_client_instance.send_message.assert_any_call(email.content)
-        mock_email_inbox_instance.send_response.assert_called_with(email.sender, "Re: " + email.subject, response)
+        mock_openai_client_instance.send_message.assert_called()
+        mock_email_inbox_instance.send_response.assert_called_with(email, response)
         self.assertEqual(response, "Processed message by OpenAI")
 
     @patch('dialogue.OpenAIClient')

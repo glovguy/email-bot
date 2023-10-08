@@ -6,10 +6,12 @@ class OpenAIClientTest(unittest.TestCase):
     
     @patch('openai_client.openai')
     def test_send_message_to_openai(self, mock_openai):
-        # Mock response from OpenAI
-        mock_openai.Completion.create.return_value = {'choices': [{'message': {'content': 'Test Response'}}]}
+        mock_openai.ChatCompletion.create.return_value = {'choices': [{'message': {'content': 'Test Response'}}]}
 
         client = OpenAIClient()
-        response = client.send_message("Hello, OpenAI!")
+        response = client.send_message([
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello, OpenAI!"}
+        ])
 
         self.assertEqual(response, "Test Response")
