@@ -21,8 +21,6 @@ class EmailInbox:
             if not email_uids:
                 return []
 
-            # raw_emails = self.server.fetch(email_uids, ['BODY[]'])
-            # emails = [Email.from_raw_email(raw_emails[email_uid], email_uid) for email_uid in raw_emails]
             emails = []
             for email_id in email_uids:
                 newEmail = self.create_email_entry(email_id)
@@ -39,8 +37,8 @@ class EmailInbox:
             raw_email = self.server.fetch(email_uid, ['BODY[]'])
             return Email.from_raw_email(raw_email[email_uid], email_uid)
         except Exception as e:
-            # If something goes wrong, mark the email as unread again
             print("error creating email entry for uid: ", email_uid, " error: ", e)
+            # If something goes wrong, mark the email as unread again
             self.server.remove_flags(email_uid, ['\\Seen'])
 
     def send_response(self, email, message):

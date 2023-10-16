@@ -1,3 +1,4 @@
+chromadb==0.4.14
 Flask==3.0.0
 IMAPClient==2.3.1
 python-decouple==3.8
@@ -5,3 +6,4 @@ pyzmail36==1.0.5
 langchain==0.0.133
 openai==0.27.8
 SQLAlchemy==1.4.49
+talon==1.4.4

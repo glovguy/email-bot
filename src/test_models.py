@@ -57,6 +57,7 @@ ody>foo</body></html=>""" }
         # Given: Some email data
         email_data = {
             'sender': 'test@example.com',
+            'recipients': 'recipient@example.com,r2@example.com',
             'subject': 'Test Email',
             'content': 'This is a test email content',
             'parent_id': None,

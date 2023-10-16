@@ -1,9 +1,12 @@
+from decouple import config
+from email.utils import getaddresses
 from pyzmail import PyzMessage
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 
 DATABASE_URL = "sqlite:///email_bot.db"
+SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS', default=config('EMAIL_ADDRESS'))
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
@@ -18,6 +21,7 @@ class Email(Base):
 
     id = Column(Integer, primary_key=True)
     sender = Column(String, nullable=False)
+    recipients_csv = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     content = Column(String, nullable=False)
     timestamp = Column(DateTime, default=func.now(), nullable=False)
@@ -29,15 +33,30 @@ class Email(Base):
 
     def __repr__(self):
         return f"<Email(id={self.id}, sender='{self.sender}', subject='{self.subject}')>"
+    
+    @property
+    def recipients(self):
+        if self.recipients_csv:
+            return self.recipients_csv.split(',')
+        return []
+    
+    @recipients.setter
+    def recipients(self, recipients_list):
+        if recipients_list:
+            self.recipients_csv = ','.join(recipients_list)
+        else:
+            self.recipients_csv = None
 
     @staticmethod
     def from_raw_email(raw_email, email_uid):
         """Parse a raw email and return an instance of the Email model."""
         message = PyzMessage.factory(raw_email[b'BODY[]'])
         sender_user = User.query.filter_by(email_address=message.get_address('from')[1]).first()
+        recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(message.get_all('to', []))]
         
         email_instance = Email(
             sender=message.get_address('from')[1],
+            recipients=recipients,
             subject=message.get_subject(),
             content=message.text_part.get_payload().decode(message.text_part.charset),
             uid=email_uid,
@@ -48,6 +67,9 @@ class Email(Base):
         db_session.commit()
         
         return email_instance
+    
+    def recipient_is_save_address(self):
+        return SAVE_EMAIL_ADDRESS in self.recipients
 
 class User(Base):
     __tablename__ = 'users'

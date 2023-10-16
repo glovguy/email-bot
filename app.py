@@ -14,3 +14,6 @@ def tick():
         response = dialogue.process(email)
         print("Response in dialogue: ", response)
 
+
+if __name__ == '__main__':
+    tick()
