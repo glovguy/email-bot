@@ -167,3 +167,4 @@ cython_debug/
 
 # Database
 email_bot.db
+documents_collection/

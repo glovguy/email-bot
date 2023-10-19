@@ -2,6 +2,7 @@ from src.openai_client import OpenAIClient
 from src.email_inbox import EmailInbox
 from src.authorization import Authorization
 from src.prompts import *
+from src.documents import DocsFolder
 
 class Dialogue:
 
@@ -37,5 +38,12 @@ class Dialogue:
         return response
     
     def save_document(self, email):
-        print("I want to save this email!", email)
-        # email.content
+        print("Saving email to vector DB: ", email)
+        doc_uuid = DocsFolder.add_document(
+            email.content,
+            { 
+                'user_id': email.sender_user_id,
+                'source_email_id': email.id
+                }
+        )
+        return doc_uuid

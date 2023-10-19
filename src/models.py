@@ -4,9 +4,11 @@ from pyzmail import PyzMessage
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+from talon.signature.bruteforce import extract_signature
 
 DATABASE_URL = "sqlite:///email_bot.db"
 SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS', default=config('EMAIL_ADDRESS'))
+SIGNATURES = config('SIGNATURES').split(',')
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
@@ -30,6 +32,7 @@ class Email(Base):
     uid = Column(String) # UID from IMAP server
     sender_user_id = Column(Integer, ForeignKey('users.id'))
     sender_user = relationship("User", back_populates="emails")
+    signatures = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
         return f"<Email(id={self.id}, sender='{self.sender}', subject='{self.subject}')>"
@@ -52,13 +55,16 @@ class Email(Base):
         """Parse a raw email and return an instance of the Email model."""
         message = PyzMessage.factory(raw_email[b'BODY[]'])
         sender_user = User.query.filter_by(email_address=message.get_address('from')[1]).first()
+        body = message.text_part.get_payload().decode(message.text_part.charset)
+        for sig in sender_user.signatures:
+            body = body.replace(sig, '').strip()
         recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(message.get_all('to', []))]
         
         email_instance = Email(
             sender=message.get_address('from')[1],
             recipients=recipients,
             subject=message.get_subject(),
-            content=message.text_part.get_payload().decode(message.text_part.charset),
+            content=body,
             uid=email_uid,
             sender_user_id=sender_user.id if sender_user else None,
             # parent_id logic, if applicable, goes here
