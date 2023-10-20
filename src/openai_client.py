@@ -9,5 +9,6 @@ class OpenAIClient:
         openai.api_key = config('OPENAI_API_KEY')
 
     def send_message(self, messages):
-        response = openai.ChatCompletion.create(model=GPT_3_5, messages=messages)
+        print("Requesting chat completion with the following messages: ", messages)
+        response = openai.ChatCompletion.create(model=GPT_4, messages=messages)
         return response.get('choices')[0]['message']['content']

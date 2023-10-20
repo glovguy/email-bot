@@ -4,11 +4,10 @@ from pyzmail import PyzMessage
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
-from talon.signature.bruteforce import extract_signature
+# from talon.signature.bruteforce import extract_signature
 
 DATABASE_URL = "sqlite:///email_bot.db"
 SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS', default=config('EMAIL_ADDRESS'))
-SIGNATURES = config('SIGNATURES').split(',')
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
@@ -32,7 +31,6 @@ class Email(Base):
     uid = Column(String) # UID from IMAP server
     sender_user_id = Column(Integer, ForeignKey('users.id'))
     sender_user = relationship("User", back_populates="emails")
-    signatures = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
         return f"<Email(id={self.id}, sender='{self.sender}', subject='{self.subject}')>"
@@ -84,9 +82,16 @@ class User(Base):
     email_address = Column(String, unique=True, nullable=False)
     name = Column(String(255), nullable=False)
     emails = relationship("Email", order_by=Email.id, back_populates="sender_user")
+    signatures_csv = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
+    
+    @property
+    def signatures(self):
+        if self.signatures_csv:
+            return self.signatures_csv.split(',')
+        return []
 
 def init_db():
     Base.metadata.create_all(bind=engine)

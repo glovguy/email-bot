@@ -27,12 +27,11 @@ class Dialogue:
         if email.recipient_is_save_address():
             self.save_document(email)
             return
-        # chatMessages = [
-        #     {"role": "system", "content": "You are a helpful assistant."},
-        #     {"role": "user", "content": email.content}
-        # ]
-        # response = self.llm_client.send_message(chatMessages)
-        response = chat_prompt(llm_client=self.llm_client, emails=[email])
+        
+        docs = DocsFolder.get_relevant_documents(email.content)
+        print('found ', len(docs), ' relevant docs')
+        # raise Exception
+        response = chat_prompt(llm_client=self.llm_client, emails=[email], docs=docs)
         self.email_inbox.send_response(email, response)
 
         return response

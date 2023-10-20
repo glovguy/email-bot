@@ -6,6 +6,8 @@ from InstructorEmbedding import INSTRUCTOR
 import uuid6
 import os
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 chroma_client = chromadb.PersistentClient(path="./documents_collection")
 embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
@@ -37,7 +39,21 @@ LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
 class DocsFolder:
     @classmethod
+    def get_relevant_documents(cls, doc_string, relevance_threshold=0.8):
+        docs = documents_collection.query(
+            query_texts=[doc_string],
+            n_results=10,
+            where={},
+            where_document={}
+        )
+        # print(docs)
+        # print(docs['distances'][0][0])
+        return [docs['documents'][0][i] for i in range(0, len(docs['ids'][0])) if docs['distances'][0][i] <= relevance_threshold]
+
+    @classmethod
     def add_document(cls, doc_string, metadata={}):
+        if doc_string == '':
+            return
         keys_to_keep = ['user_id', 'source_email_id']
         metad = {k: metadata[k] for k in keys_to_keep if k in metadata}
         uuid = str(uuid6.uuid7())
