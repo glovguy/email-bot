@@ -12,7 +12,7 @@ class Dialogue:
 
     def process(self, email):
         """
-        Process the email by checking its authorization and if authorized, 
+        Process the email by checking its authorization and if authorized,
         sending its content to OpenAI and responding to the email with the result.
 
         Args:
@@ -23,7 +23,7 @@ class Dialogue:
         """
         if not Authorization.is_authorized(email.sender):
             return None
-        
+
         if email.recipient_is_save_address():
             self.save_document(email)
             return
@@ -36,14 +36,18 @@ class Dialogue:
         self.email_inbox.send_response(email, response)
 
         return response
-    
+
     def save_document(self, email):
+        existing_doc = DocsFolder.check_for_existing_email_doc(email)
+        if existing_doc is not None:
+            return existing_doc
+
         print("Saving email to vector DB: ", email)
         doc_uuid = DocsFolder.add_document(
             email.content,
-            { 
+            {
                 'user_id': email.sender_user_id,
                 'source_email_id': email.id
-                }
+            }
         )
         return doc_uuid
