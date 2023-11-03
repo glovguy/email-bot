@@ -1,11 +1,14 @@
 from imapclient import IMAPClient
 from decouple import config
 from email.mime.text import MIMEText
+from email.utils import make_msgid
 import smtplib
-from src.models import Email
+import uuid6
+from src.models import Email, db_session
 
 UNREAD = ['UNSEEN']
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
+EMAIL_DOMAIN = config('EMAIL_DOMAIN')
 
 class EmailInbox:
     def __init__(self):
@@ -41,20 +44,36 @@ class EmailInbox:
             # If something goes wrong, mark the email as unread again
             self.server.remove_flags(email_uid, ['\\Seen'])
 
-    def send_response(self, email, message):
-        return self.send_email(email.sender, "Re: " + email.subject, message)
-    
-    def send_email(self, recipient, subject, body):
+    def send_email(self, recipient, subject, body, parent_email=None):
         """Send an email to the specified recipient."""
         msg = MIMEText(body)
         msg['From'] = EMAIL_ADDRESS
         msg['To'] = recipient
         msg['Subject'] = subject
+        message_id = make_msgid(str(uuid6.uuid7()), domain=EMAIL_DOMAIN) # f"<{}@{EMAIL_DOMAIN}>"
+        msg['Message-ID'] = message_id
+        thread_path = Email.thread_path_from_parent(message_id, parent_email=parent_email)
+        if parent_email:
+            msg['In-Reply-To'] = parent_email.message_id
+            msg['References'] = parent_email.thread_path.replace('/',',')
 
         with self.email_session.connect_smtp() as server:
             server.sendmail(EMAIL_ADDRESS, [recipient], msg.as_string())
         
         print(f"Sent email to {recipient} with subject '{subject}'")
+        email_instance = Email(
+            sender=EMAIL_ADDRESS,
+            recipients=[recipient],
+            subject=recipient,
+            content=body,
+            message_id=message_id,
+            thread_path=thread_path,
+            is_processed=1
+            # uid=??? # need to set up a way to figure out the uid
+        )
+        db_session.add(email_instance)
+        db_session.commit()
+        return email_instance
 
 
 class EmailSession:

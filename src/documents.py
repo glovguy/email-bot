@@ -8,15 +8,12 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-
 chroma_client = chromadb.PersistentClient(path="./documents_collection")
 embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 def embed(doc_string):
-    # print("embed doc_string: ", type(doc_string), doc_string)
     instruction = "Represent the personal Zettelkasten note for storing and retrieving personal insights: "
     vec = embeddings_model.encode([[instruction, doc_string[0]]]).tolist()
-    # print("vec type: ", type(vec))
     return vec
 
 documents_collection = chroma_client.get_or_create_collection(name="documents_collection", embedding_function=embed)
@@ -34,27 +31,32 @@ metadata
     user_id
 }
 '''
+# to add: title, filepath
+# That way I can add the title in prompts
+# then re-add the local files via a script? Or maybe a "repair" script would be better?
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
-class DocsFolder:
+class Zettelkasten:
     @classmethod
-    def get_relevant_documents(cls, doc_string, relevance_threshold=0.8):
-        docs = documents_collection.query(
-            query_texts=[doc_string],
-            n_results=10,
+    def get_relevant_documents(cls, doc_strings, n_results=10, include=['documents']):
+        results = documents_collection.query(
+            query_texts=doc_strings,
+            n_results=n_results,
             where={},
-            where_document={}
+            where_document={},
+            include=include
         )
-        # print(docs)
-        # print(docs['distances'][0][0])
-        return [docs['documents'][0][i] for i in range(0, len(docs['ids'][0])) if docs['distances'][0][i] <= relevance_threshold]
+        # I could put in a relevance_threshold filter?
+        return results
+        # return [results['documents'][0][i] for i in range(0, len(results['ids'][0]))]
 
     @classmethod
     def add_document(cls, doc_string, metadata={}):
         if doc_string == '':
             return
-        keys_to_keep = ['user_id', 'source_email_id']
+
+        keys_to_keep = ['user_id', 'source_email_id', 'title']
         metad = {k: metadata[k] for k in keys_to_keep if k in metadata}
         uuid = str(uuid6.uuid7())
         sha = cls.doc_sha(doc_string)
@@ -81,7 +83,8 @@ class DocsFolder:
             if not os.path.isfile(os.path.join(folderPath, item)):
                 numFolderItems += 1
                 continue
-            with open(os.path.join(folderPath, item), 'r') as f:
+            item_path = os.path.join(folderPath, item)
+            with open(item_path, 'r') as f:
                 data = f.read()
                 filtered_data = FileFilter().filter_out_metadata(data)
                 exts = cls.check_for_existing_file_doc(filtered_data)
@@ -90,7 +93,7 @@ class DocsFolder:
                     numFilesSkipped += 1
                     continue
                 
-                cls.add_document(filtered_data)
+                cls.add_document(filtered_data, { "title": item })
                 numDocsMade += 1
         print("found ", len(items), " items in folder")
         print(numFolderItems, " were folders and skipped")
@@ -114,7 +117,7 @@ class DocsFolder:
     def get_document(cls, **kwargs):
         '''e.g. get_document(sha="foo-bar")'''
         ids = []
-        if [kwargs.get('uuid')] is not None:
+        if kwargs.get('uuid') is not None:
             ids = [kwargs.get('uuid')]
         return documents_collection.get(
             ids=ids,
