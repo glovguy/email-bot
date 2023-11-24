@@ -11,14 +11,21 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 chroma_client = chromadb.PersistentClient(path="./documents_collection")
 embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
-def embed(doc_string):
+def zettel_note_embed(doc_string):
     instruction = "Represent the personal Zettelkasten note for storing and retrieving personal insights: "
     vec = embeddings_model.encode([[instruction, doc_string[0]]]).tolist()
     return vec
 
-documents_collection = chroma_client.get_or_create_collection(name="documents_collection", embedding_function=embed)
+def botbrain_note_embed(doc_string):
+    instruction = "Represent this note written about the user's preferences and personality: "
+    vec = embeddings_model.encode([[instruction, doc_string[0]]]).tolist()
+    return vec
+
+documents_collection = chroma_client.get_or_create_collection(name="documents_collection", embedding_function=zettel_note_embed)
+botbrain_collection = chroma_client.get_or_create_collection(name="botbrain_collection", embedding_function=botbrain_note_embed)
 
 '''
+Zettelkasten document
 metadata
 {
     uuid
@@ -31,6 +38,20 @@ metadata
     user_id
 }
 '''
+
+'''
+BotBrain document
+metadata
+{
+    uuid
+    sha
+    created_at
+    last_modified_at
+    content
+    vectored_content
+    user_id
+}
+'''
 # to add: title, filepath
 # That way I can add the title in prompts
 # then re-add the local files via a script? Or maybe a "repair" script would be better?
@@ -39,11 +60,11 @@ LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
 class Zettelkasten:
     @classmethod
-    def get_relevant_documents(cls, doc_strings, n_results=10, include=['documents']):
+    def get_relevant_documents(cls, doc_strings, n_results=7, where={}, include=['documents']):
         results = documents_collection.query(
             query_texts=doc_strings,
             n_results=n_results,
-            where={},
+            where=where,
             where_document={},
             include=include
         )
@@ -72,7 +93,7 @@ class Zettelkasten:
             ids=[uuid]
         )
         return uuid
-    
+
     @classmethod
     def add_documents_from_folder(cls, folderPath):
         numDocsMade = 0
@@ -92,19 +113,19 @@ class Zettelkasten:
                     print('found a doc: ', exts)
                     numFilesSkipped += 1
                     continue
-                
+
                 cls.add_document(filtered_data, { "title": item })
                 numDocsMade += 1
         print("found ", len(items), " items in folder")
         print(numFolderItems, " were folders and skipped")
         print("Made ", numDocsMade, " docs")
         print("Skipped ", numFilesSkipped, " files because they already existed")
-        
+
     @classmethod
     def check_for_existing_email_doc(cls, email):
         sha = cls.doc_sha(email.content)
         return cls.get_document(**{ '$or': [{'sha': sha}, {'source_email_id': email.id}] })
-    
+
     @classmethod
     def check_for_existing_file_doc(cls, fileStr):
         sha = cls.doc_sha(fileStr)
@@ -152,3 +173,52 @@ class FileFilter:
                 filtered_lines.append(line)
 
         return '\n'.join(filtered_lines)
+
+class BotBrain:
+    @classmethod
+    def get_relevant_documents(cls, doc_strings, n_results=5, where={}, include=['documents']):
+        results = botbrain_collection.query(
+            query_texts=doc_strings,
+            n_results=n_results,
+            where=where,
+            where_document={},
+            include=include
+        )
+        return results
+
+    @classmethod
+    def add_document(cls, doc_string, metadata={}):
+        if doc_string == '' or metadata.get('user_id') is None:
+            return
+
+        keys_to_keep = ['user_id', 'title']
+        metad = {k: metadata[k] for k in keys_to_keep if k in metadata}
+        uuid = str(uuid6.uuid7())
+        sha = cls.doc_sha(doc_string)
+        now = str(datetime.now())
+        meta = {
+            "sha": sha,
+            "created_at": now,
+            **metad
+        }
+        botbrain_collection.add(
+            documents=[doc_string],
+            metadatas=[meta],
+            ids=[uuid]
+        )
+        return uuid
+
+    @classmethod
+    def get_document(cls, **kwargs):
+        '''e.g. get_document(sha="foo-bar")'''
+        ids = []
+        if kwargs.get('uuid') is not None:
+            ids = [kwargs.get('uuid')]
+        return botbrain_collection.get(
+            ids=ids,
+            where=kwargs
+        )
+
+    @classmethod
+    def doc_sha(cls, doc_string):
+        return sha256(doc_string.encode('utf-8')).hexdigest()

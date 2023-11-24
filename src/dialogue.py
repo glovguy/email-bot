@@ -1,19 +1,36 @@
 import os
 import time
+import random
 import requests
 import json
+import datetime
 from src.openai_client import OpenAIClient
 from src.email_inbox import EmailInbox
 from src.authorization import Authorization
 from src.prompts import *
-from src.documents import Zettelkasten, LOCAL_DOCS_FOLDER
-from src.models import db_session
+from src.documents import BotBrain, LOCAL_DOCS_FOLDER, Zettelkasten
+from src.models import db_session, Email
 
 class Dialogue:
-
     def __init__(self):
         self.llm_client = OpenAIClient()
         self.email_inbox = EmailInbox()
+
+    def print_traceback(self, e):
+        trace = []
+        tb = e.__traceback__
+        while tb is not None:
+            trace.append({
+                "filename": tb.tb_frame.f_code.co_filename,
+                "name": tb.tb_frame.f_code.co_name,
+                "lineno": tb.tb_lineno
+            })
+            tb = tb.tb_next
+        print(
+            'type: ', type(e).__name__,
+            '\nmessage: ', str(e),
+            '\ntrace: ', "\n".join(f"{v}" for v in trace)
+        )
 
     def process(self, email):
         """
@@ -37,39 +54,45 @@ class Dialogue:
                 email.is_processed = True
                 db_session.commit()
                 return
-            
-            return self.BSHR_single_round_chat(email)
 
+            docs = BotBrain.get_relevant_documents(email.content)
+            save_fn_resp = self.llm_client.send_message_with_functions(
+                **save_user_info_functions(email_chain=email.email_chain(), existing_user_docs=docs)
+            )
+
+            try:
+                if save_fn_resp.get("tool_calls"): # and save_fn_resp.get("tool_calls")[0].get("function").get("arguments").get("save_document"):
+                    resp_args = json.loads(save_fn_resp.get("tool_calls")[0].get("function").get("arguments"))
+                    if resp_args.get("save_document"):
+                        new_docs = resp_args.get("user_notes")
+                        print("Going to save docs: ", new_docs)
+                        for new_doc in new_docs:
+                            doc_id = BotBrain.add_document(new_doc, { 'user_id': email.sender_user.id })
+                            print("Saved doc ", doc_id)
+                else:
+                    print("Skipping saving a user info doc")
+                    print("save_fn_resp: ", save_fn_resp)
+            except:
+                print("Error trying to navigate response.\nSkipping saving a user info doc")
+                print("save_fn_resp: ", save_fn_resp)
 
             docs = Zettelkasten.get_relevant_documents([email.content])
             print('found ', len(docs), ' relevant docs')
-            
+
             email_chain = email.email_chain()
-            chatMessages = chat_prompt(llm_client=self.llm_client, emails=email_chain, docs=docs)
-            print("\n\n", chatMessages, "\n\n")
-            response = self.llm_client.send_message(chatMessages, True)['content']
-            self.send_response(email, response)['content']
+            response = self.llm_client.send_message(**chat_prompt(emails=email_chain, docs=docs))['content']
+            self.send_response(email, response)
 
             return response
         except Exception as e:
             print("Could not process email: ", email, " due to exception ", e)
+            self.print_traceback(e)
 
     def compose_clarifying_questions(self, email):
-        msg = self.llm_client.send_message_with_functions(**clarifications_prompt_with_functions(query=email.content))
-        # if "nothing to clarify" in msg.lower() or msg.lower().startswith("no"):
-        #     return
-        # return msg
-        # if msg.get("function_call") and msg["function_call"]["name"] == "ask_clarifying_questions":
-            # Note: the JSON response may not always be valid; be sure to handle errors
-        print("Clarifying questions response: ", msg)
-        if msg.get("function_call"):
+        msg = self.llm_client.send_message_with_functions(**clarifications_prompt_with_skip_function(query=email.content))
+        if msg.get("tool_calls"):
             return
         return msg['content']
-        # try:
-        #     return json.loads(msg["function_call"]["arguments"])["search_queries"]
-        # except:
-        #     print("unable to parse OpenAI function call")
-        #     return []
 
     def BSHR_single_round_chat(self, email):
         # First ask for any clarifications from user
@@ -88,7 +111,7 @@ class Dialogue:
         except:
             print("Failed to parse")
             search_queries = []
-        
+
         # Step 2: Search the internet
         wikipedia_search_results = []
         search_urls = []
@@ -101,7 +124,6 @@ class Dialogue:
             **BSHR_brainstorm_zettelkasten(email.email_chain())
         )
         print("zettelkasten_queries: ", msg)
-        # if msg.get("function_call") and msg["function_call"]["name"] == "search_in_zettelkasten":
         try:
             zettelkasten_queries = json.loads(msg["function_call"]["arguments"])["search_queries"]
             zettel_search_results = Zettelkasten.get_relevant_documents(zettelkasten_queries)
@@ -109,7 +131,7 @@ class Dialogue:
         except Exception as err:
             print("Failed to get Zettelkasten queries due to error: ", err)
             zettels = []
-        
+
         response = self.llm_client.send_message(
             **BSHR_generate_hypothesis(
                 email_chain=email.email_chain(),
@@ -118,7 +140,7 @@ class Dialogue:
             ),
             use_slow_model=True
         )['content']
-        
+
         self.send_response(email, response)
         return response
 
@@ -127,6 +149,44 @@ class Dialogue:
         self.email_inbox.send_email(email.sender, email.subject, response, parent_email=email)
         email.is_processed = True
         db_session.commit()
+
+    def ask_get_to_know_you(self, user):
+        since = datetime.datetime.now() - datetime.timedelta(hours=48)
+        latest_emails = Email.query.filter_by(sender_user=user).filter(Email.timestamp > since).all()
+        if len(latest_emails) == 0:
+            latest_emails = Email.query.filter_by(sender_user=user).order_by(Email.timestamp).first()
+
+        latest_email_strings = [email.content for email in latest_emails]
+        zettel_search_results = Zettelkasten.get_relevant_documents(latest_email_strings, n_results=3)
+        zettels = [d for d in zettel_search_results['documents'][0]]
+        zettels += latest_email_strings
+        print("zettels count: ", len(zettels))
+        response = self.llm_client.send_message(**ask_get_to_know_user(zettels=zettels)).content
+        self.email_inbox.send_email(user.email_address, 'Getting to know you', response)
+        return response
+
+    def ponder_wittgenstein(self, user):
+        pi_witt = open("pi_english.txt", "r").read()
+        pi_entries = pi_witt.split("=======")
+
+        picked_index = random.choices(range(len(pi_entries)-3), k=1)[0]
+        picked_entries = pi_entries[picked_index:picked_index+3]
+
+        zettel_search_results = Zettelkasten.get_relevant_documents(picked_entries, n_results=3)
+        zettels = [d for d in zettel_search_results['documents'][0]]
+
+        print("zettels count: ", len(zettels))
+        response = self.llm_client.send_message(**ponder_wittgenstein(wittgenstein_entries=picked_entries, zettels=zettels)).content
+        self.email_inbox.send_email(
+            user.email_address,
+            f'Some thoughts about Wittgenstein {picked_index}.',
+            "Wittgenstein:" +
+                "=======".join(picked_entries) +
+                "* * *\n\nZettels:\n\n" + "\n\n---".join(zettels) +
+                "\n\n* * *\n\nMy thoughts:\n\n" +
+                response
+        )
+        return response
 
     # could later add SEP:
     # https://plato.stanford.edu/search/searcher.py?query=something

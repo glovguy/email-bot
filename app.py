@@ -1,6 +1,7 @@
+from decouple import config
 from src.email_inbox import EmailInbox
 from src.dialogue import Dialogue
-from src.models import Email
+from src.models import Email, User
 
 
 inbox = EmailInbox()
@@ -16,5 +17,14 @@ def tick():
         print("Processing email: ", email)
         dialogue.process(email)
 
+def ask_get_to_know_you():
+    me = User.query.filter_by(name=config('ME')).first()
+    dialogue.ask_get_to_know_you(me)
+
+def ponder_wittgenstein():
+    me = User.query.filter_by(name=config('ME')).first()
+    dialogue.ponder_wittgenstein(me)
+
 if __name__ == '__main__':
     tick()
+    ponder_wittgenstein()
