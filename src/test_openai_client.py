@@ -14,4 +14,4 @@ class OpenAIClientTest(unittest.TestCase):
             {"role": "user", "content": "Hello, OpenAI!"}
         ])
 
-        self.assertEqual(response, "Test Response")
+        self.assertEqual(response, { "content": "Test Response" })
