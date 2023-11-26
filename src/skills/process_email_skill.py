@@ -1,16 +1,11 @@
-import os
-import time
-import random
-import requests
 import json
-import datetime
-from src.dialogues.dialogue_base import DialogueBase
+from src.skills.skill_base import SkillBase
 from src.authorization import Authorization
 from src.prompts import *
 from src.documents import BotBrain, Zettelkasten
 from src.models import db_session
 
-class ProcessEmailDialogue(DialogueBase):
+class ProcessEmailSkill(SkillBase):
     def process(self, email):
         """
         Process the email by checking its authorization and if authorized,

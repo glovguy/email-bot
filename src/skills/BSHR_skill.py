@@ -1,8 +1,8 @@
 import json
 from src.prompts import *
-from src.dialogues.dialogue_base import DialogueBase
+from src.skills.skill_base import SkillBase
 
-class BSHRDialogue(DialogueBase):
+class BSHRSkill(SkillBase):
 
     def compose_clarifying_questions(self, email):
         msg = self.llm_client.send_message_with_functions(**clarifications_prompt_with_skip_function(query=email.content))

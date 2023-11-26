@@ -7,7 +7,7 @@ from src.prompts import *
 from src.documents import LOCAL_DOCS_FOLDER, Zettelkasten
 from src.models import db_session
 
-class DialogueBase(object):
+class SkillBase(object):
     def __init__(self):
         self.llm_client = OpenAIClient()
         self.email_inbox = EmailInbox()

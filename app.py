@@ -2,9 +2,9 @@ from decouple import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from src.email_inbox import EmailInbox
-from src.dialogues.ponder_wittgenstein_dialogue import PonderWittgensteinDialogue
-from src.dialogues.process_email_dialogue import ProcessEmailDialogue
-from src.dialogues.get_to_know_you_dialogue import GetToKnowYouDialogue
+from src.skills.ponder_wittgenstein_dialogue import PonderWittgensteinSkill
+from src.skills.process_email_dialogue import ProcessEmailSkill
+from skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import Email, User
 
 me = User.query.filter_by(name=config('ME')).first()
@@ -18,13 +18,13 @@ def tick():
     print(len(unprocessed_emails), " unprocessed emails.")
     for email in unprocessed_emails:
         print("Processing email: ", email)
-        ProcessEmailDialogue().process(email)
+        ProcessEmailSkill().process(email)
 
 def ask_get_to_know_you():
-    GetToKnowYouDialogue().ask_get_to_know_you(me)
+    GetToKnowYouSkill().ask_get_to_know_you(me)
 
 def ponder_wittgenstein():
-    PonderWittgensteinDialogue().ponder_wittgenstein(me)
+    PonderWittgensteinSkill().ponder_wittgenstein(me)
 
 app = Flask(__name__)
 

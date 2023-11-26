@@ -2,9 +2,9 @@ import datetime
 from src.prompts import *
 from src.documents import Zettelkasten
 from src.models import Email
-from src.dialogues.dialogue_base import DialogueBase
+from src.skills.skill_base import SkillBase
 
-class GetToKnowYouDialogue(DialogueBase):
+class GetToKnowYouSkill(SkillBase):
     def ask_get_to_know_you(self, user):
         since = datetime.datetime.now() - datetime.timedelta(hours=48)
         latest_emails = Email.query.filter_by(sender_user=user).filter(Email.timestamp > since).all()

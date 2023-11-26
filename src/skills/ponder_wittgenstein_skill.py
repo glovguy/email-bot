@@ -1,9 +1,9 @@
 import random
 from src.prompts import *
 from src.documents import Zettelkasten
-from src.dialogues.dialogue_base import DialogueBase
+from src.skills.skill_base import SkillBase
 
-class PonderWittgensteinDialogue(DialogueBase):
+class PonderWittgensteinSkill(SkillBase):
     def ponder_wittgenstein(self, user):
         pi_witt = open("pi_english.txt", "r").read()
         pi_entries = pi_witt.split("=======")
