@@ -21,7 +21,7 @@ class PonderWittgensteinDialogue(DialogueBase):
             f'Some thoughts about Wittgenstein {picked_index}.',
             "Wittgenstein:" +
                 "=======".join(picked_entries) +
-                "* * *\n\nZettels:\n\n" + "\n\n---".join(zettels) +
+                "* * *\n\nZettels:\n\n" + "---\n\n".join(zettels) +
                 "\n\n* * *\n\nMy thoughts:\n\n" +
                 response
         )
