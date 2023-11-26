@@ -12,11 +12,6 @@ You may choose to agree with the user's thoughts, to challenge them, or to ask f
 Your ultimate goal is to help the user flesh out their Zettelkasten personal notes. Be concise and insightful. Don't make up facts and don't suggest links to notes that aren't included above. Suggest tags, connections between notes, or new avenues for exploration as appropriate."""
 }
 
-# HYPOTHESIS_SYSTEM_MESSAGE = {
-#     "role": "system",
-#     "content": """You are a hypothesis generator. You will be given a main query and a list of search results from the internet as well as personal Zettelkasten notes. Your output is to be a hypothesis - a proposed answer to the question."""
-# }
-
 def email_chain_to_messages(email_chain):
     messages = []
     emails = sorted(email_chain, key=lambda e: e.timestamp)

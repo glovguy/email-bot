@@ -2,9 +2,9 @@ from decouple import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from src.email_inbox import EmailInbox
-from src.skills.ponder_wittgenstein_dialogue import PonderWittgensteinSkill
-from src.skills.process_email_dialogue import ProcessEmailSkill
-from skills.get_to_know_you_skill import GetToKnowYouSkill
+from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
+from src.skills.process_email_skill import ProcessEmailSkill
+from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import Email, User
 
 me = User.query.filter_by(name=config('ME')).first()

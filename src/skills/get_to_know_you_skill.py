@@ -1,8 +1,8 @@
 import datetime
 from src.prompts import *
-from src.documents import Zettelkasten
+from src.skills.zettelkasten_skill import Zettelkasten
 from src.models import Email
-from src.skills.skill_base import SkillBase
+from src.skills.base import SkillBase
 
 class GetToKnowYouSkill(SkillBase):
     def ask_get_to_know_you(self, user):

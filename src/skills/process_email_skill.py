@@ -1,8 +1,9 @@
 import json
-from src.skills.skill_base import SkillBase
+from src.skills.base import SkillBase
 from src.authorization import Authorization
 from src.prompts import *
-from src.documents import BotBrain, Zettelkasten
+from src.documents import BotBrain
+from src.skills.zettelkasten_skill import Zettelkasten
 from src.models import db_session
 
 class ProcessEmailSkill(SkillBase):

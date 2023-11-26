@@ -1,10 +1,12 @@
+from datetime import datetime
+from hashlib import sha256
 import os
-import time
 import requests
+import time
+import uuid6
 from src.openai_client import OpenAIClient
 from src.email_inbox import EmailInbox
 from src.prompts import *
-from src.documents import LOCAL_DOCS_FOLDER, Zettelkasten
 from src.models import db_session
 
 class SkillBase(object):
@@ -74,21 +76,15 @@ class SkillBase(object):
 
         return content, url
 
-    def save_document(self, email):
-        title = email.subject
-        if title == '':
-            title = str(int(time.time()*1000))
-        title += '.md'
-        filepath = os.path.join(LOCAL_DOCS_FOLDER, title)
-        print("creating file at ", filepath)
-        f = open(filepath, "x")
-        f.write(email.content)
+class DocumentsBase:
+    @classmethod
+    def generate_uuid(cls):
+        return str(uuid6.uuid7())
 
-        doc_uuid = Zettelkasten.add_document(
-            email.content,
-            {
-                'user_id': email.sender_user_id,
-                'source_email_id': email.id
-            }
-        )
-        return doc_uuid
+    @classmethod
+    def doc_sha(cls, doc_string):
+        return sha256(doc_string.encode('utf-8')).hexdigest()
+
+    @classmethod
+    def now_str(cls):
+        return str(datetime.now())

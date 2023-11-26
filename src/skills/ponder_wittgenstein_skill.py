@@ -1,7 +1,7 @@
 import random
 from src.prompts import *
-from src.documents import Zettelkasten
-from src.skills.skill_base import SkillBase
+from src.skills.zettelkasten_skill import Zettelkasten
+from src.skills.base import SkillBase
 
 class PonderWittgensteinSkill(SkillBase):
     def ponder_wittgenstein(self, user):

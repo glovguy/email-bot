@@ -1,6 +1,8 @@
+APScheduler==3.10.4
 chromadb==0.4.14
 email-reply-parser==0.5.12
 Flask==3.0.0
+Flask-APScheduler==1.13.1
 IMAPClient==2.3.1
 python-decouple==3.8
 pyzmail36==1.0.5

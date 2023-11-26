@@ -1,6 +1,6 @@
 import json
 from src.prompts import *
-from src.skills.skill_base import SkillBase
+from src.skills.base import SkillBase
 
 class BSHRSkill(SkillBase):
 
