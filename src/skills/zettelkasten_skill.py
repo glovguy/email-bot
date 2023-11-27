@@ -83,33 +83,6 @@ class Zettelkasten(DocumentsBase):
         return uuid
 
     @classmethod
-    def add_documents_from_folder(cls, folderPath):
-        numDocsMade = 0
-        numFilesSkipped = 0
-        numFolderItems = 0
-        items = os.listdir(folderPath)
-        for item in items:
-            if not os.path.isfile(os.path.join(folderPath, item)):
-                numFolderItems += 1
-                continue
-            item_path = os.path.join(folderPath, item)
-            with open(item_path, 'r') as f:
-                data = f.read()
-                filtered_data = FileFilterService().filter_out_metadata(data)
-                exts = cls.check_for_existing_file_doc(filtered_data)
-                if len(exts.get('ids')) > 0:
-                    print('found a doc: ', exts)
-                    numFilesSkipped += 1
-                    continue
-
-                cls.add_document(filtered_data, { "title": item })
-                numDocsMade += 1
-        print("found ", len(items), " items in folder")
-        print(numFolderItems, " were folders and skipped")
-        print("Made ", numDocsMade, " docs")
-        print("Skipped ", numFilesSkipped, " files because they already existed")
-
-    @classmethod
     def check_for_existing_email_doc(cls, email):
         sha = cls.doc_sha(email.content)
         return cls.get_document(**{ '$or': [{'sha': sha}, {'source_email_id': email.id}] })
@@ -137,6 +110,33 @@ class Zettelkasten(DocumentsBase):
 class FileFilterService:
     def __init__(self):
         self.content_marker = '## ؜'
+
+    @classmethod
+    def add_documents_from_folder(cls, folderPath):
+        numDocsMade = 0
+        numFilesSkipped = 0
+        numFolderItems = 0
+        items = os.listdir(folderPath)
+        for item in items:
+            if not os.path.isfile(os.path.join(folderPath, item)):
+                numFolderItems += 1
+                continue
+            item_path = os.path.join(folderPath, item)
+            with open(item_path, 'r') as f:
+                data = f.read()
+                filtered_data = cls.filter_out_metadata(data)
+                exts = Zettelkasten.check_for_existing_file_doc(filtered_data)
+                if len(exts.get('ids')) > 0:
+                    print('found a doc: ', exts)
+                    numFilesSkipped += 1
+                    continue
+
+                Zettelkasten.add_document(filtered_data, { "title": item })
+                numDocsMade += 1
+        print("found ", len(items), " items in folder")
+        print(numFolderItems, " were folders and skipped")
+        print("Made ", numDocsMade, " docs")
+        print("Skipped ", numFilesSkipped, " files because they already existed")
 
     def filter_out_metadata(self, text: str) -> str:
         current_depth = self.content_marker.count('#')
