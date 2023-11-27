@@ -24,6 +24,9 @@ metadata
     user_id
 }
 '''
+# to add: title, filepath
+# That way I can add the title in prompts
+# then re-add the local files via a script? Or maybe a "repair" script would be better?
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
