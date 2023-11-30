@@ -4,8 +4,6 @@ from src.skills.zettelkasten_skill import Zettelkasten
 from src.models import Email
 from src.skills.base import SkillBase
 
-GET_TO_KNOW_DOC_ID = "get_to_know_you"
-
 class GetToKnowYouSkill(SkillBase):
     def ask_get_to_know_you(self, user):
         since = datetime.datetime.now() - datetime.timedelta(hours=48)

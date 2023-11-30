@@ -1,5 +1,5 @@
 import json
-from src.skills.base import SkillBase, email_chain_to_prompt_messages
+from src.skills.base import SkillBase, email_chain_to_prompt_messages, MASTER_AI_PERSONA_PROMPT
 from src.authorization import Authorization
 from src.prompts import *
 from src.skills.bot_brain import BotBrain

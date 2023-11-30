@@ -1,6 +1,6 @@
 import json
 from src.prompts import *
-from src.skills.base import SkillBase, email_chain_to_prompt_messages
+from src.skills.base import SkillBase, email_chain_to_prompt_messages, MASTER_AI_PERSONA_PROMPT
 
 class BSHRSkill(SkillBase):
     def compose_clarifying_questions(self, email):
