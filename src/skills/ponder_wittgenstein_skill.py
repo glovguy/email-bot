@@ -26,3 +26,44 @@ class PonderWittgensteinSkill(SkillBase):
                 response
         )
         return response
+
+
+def ponder_wittgenstein(**kwargs):
+    ''' kwargs {
+        wittgenstein_entries: Array<string>
+        zettels: Array<string>
+    }
+    '''
+    messages = [{
+        "role": "system",
+        "content": "You are a philosopher who specializes in Wittgenstein and Artificial Intelligence.\n\nBelow are some entries written by Ludwig Wittgenstein in his book Philosophical Investigations. Please discuss at length their relevance to large language models."
+    }]
+    if kwargs.get('wittgenstein_entries') is not None and len(kwargs.get('wittgenstein_entries')):
+        messages.append({
+            "role": "system",
+            "content": "Wittgenstein wrote:\n"
+        })
+        for entry in kwargs.get('wittgenstein_entries'):
+            messages.append({
+                "role": "user",
+                "content": entry
+            })
+    if kwargs.get('zettels') is not None and len(kwargs.get('zettels')):
+        messages.append({
+            "role": "system",
+            "content": "Below are some Zettelkasten notes written by the user. These notes may contain ideas relevant to the above entries. It is okay to ignore these if they are not relevant."
+        })
+        for zettel in kwargs.get('zettels'):
+            messages.append({
+                "role": "user",
+                "content": zettel
+            })
+    messages.append({
+        "role": "system",
+        "content": "Professor, I'd be so happy if you could share your thoughts. Please discuss at length the above Wittgenstein quotes and their relevance to large language models. We are looking for a unique spin on these passages. (You may use the user's notes above to understand what the user finds to be interesting, but you need not reference them.)\n\nBe creative and have fun! Looking forward to hearing from you!"
+    })
+    return {
+        "messages": messages,
+        "temperature": 0.95,
+        "use_slow_model": True
+    }

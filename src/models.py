@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 
 DATABASE_URL = "sqlite:///email_bot.db"
-SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS', default=config('EMAIL_ADDRESS'))
+SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS')
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,

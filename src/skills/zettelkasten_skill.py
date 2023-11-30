@@ -1,7 +1,7 @@
 from decouple import config
 import os
-from src.skills.base import DocumentsBase, SkillBase
-from src.documents import chroma_client, default_embeddings_model
+import time
+from src.skills.base import DocumentsBase, SkillBase, chroma_client, default_embeddings_model
 
 def zettel_note_embed(doc_string):
     instruction = "Represent the personal Zettelkasten note for storing and retrieving personal insights: "

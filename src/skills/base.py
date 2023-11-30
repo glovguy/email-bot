@@ -1,13 +1,22 @@
+import chromadb
 from datetime import datetime
+from decouple import config
 from hashlib import sha256
+from InstructorEmbedding import INSTRUCTOR
 import os
 import requests
-import time
 import uuid6
 from src.openai_client import OpenAIClient
 from src.email_inbox import EmailInbox
 from src.prompts import *
 from src.models import db_session
+
+EMAIL_ADDRESS = config('EMAIL_ADDRESS')
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+documents_collection_path = config('DOCUMENTS_COLLECTION_PATH', default="./documents_collection")
+chroma_client = chromadb.PersistentClient(path=documents_collection_path)
+default_embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 class SkillBase(object):
     def __init__(self):
@@ -88,3 +97,17 @@ class DocumentsBase:
     @classmethod
     def now_str(cls):
         return str(datetime.now())
+
+def email_chain_to_prompt_messages(email_chain):
+    messages = []
+    emails = sorted(email_chain, key=lambda e: e.timestamp)
+    for eml in emails:
+        if eml.sender == EMAIL_ADDRESS:
+            role = "assistant"
+        else:
+            role = "user"
+        messages.append({
+            "role": role,
+            "content": eml.content
+        })
+    return messages
