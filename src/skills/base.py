@@ -8,7 +8,6 @@ import requests
 import uuid6
 from src.openai_client import OpenAIClient
 from src.email_inbox import EmailInbox
-from src.prompts import *
 from src.models import db_session
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -19,11 +18,11 @@ chroma_client = chromadb.PersistentClient(path=documents_collection_path)
 default_embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 class SkillBase(object):
-    def __init__(self):
-        self.llm_client = OpenAIClient()
-        self.email_inbox = EmailInbox()
+    llm_client = OpenAIClient()
+    email_inbox = EmailInbox()
 
-    def print_traceback(self, e):
+    @classmethod
+    def print_traceback(cls, e):
         trace = []
         tb = e.__traceback__
         while tb is not None:
@@ -39,15 +38,17 @@ class SkillBase(object):
             '\ntrace: ', "\n".join(f"{v}" for v in trace)
         )
 
-    def send_response(self, email, response):
+    @classmethod
+    def send_response(cls, email, response):
         print("\n\nAttempting to send response to email ", email, "\n\nResponse:\n\n", response)
-        self.email_inbox.send_email(email.sender, email.subject, response, parent_email=email)
+        cls.email_inbox.send_email(email.sender, email.subject, response, parent_email=email)
         email.is_processed = True
         db_session.commit()
 
     # could later add SEP:
     # https://plato.stanford.edu/search/searcher.py?query=something
-    def search_wikipedia(self, query):
+    @classmethod
+    def search_wikipedia(cls, query):
         url = 'https://en.wikipedia.org/w/api.php'
         search_params = {
             'action': 'query',

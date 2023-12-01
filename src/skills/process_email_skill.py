@@ -1,13 +1,13 @@
-import json
+from src.event_bus import EventBus
 from src.skills.base import SkillBase, email_chain_to_prompt_messages, MASTER_AI_PERSONA_PROMPT
 from src.authorization import Authorization
-from src.prompts import *
 from src.skills.bot_brain import BotBrain
 from src.skills.zettelkasten_skill import Zettelkasten
 from src.models import db_session
 
 class ProcessEmailSkill(SkillBase):
-    def process(self, email):
+    @classmethod
+    def process(cls, email):
         """
         Process the email by checking its authorization and if authorized,
         sending its content to OpenAI and responding to the email with the result.
@@ -25,43 +25,44 @@ class ProcessEmailSkill(SkillBase):
                 return None
 
             if email.recipient_is_save_address():
-                self.save_document(email)
+                cls.save_document(email)
                 email.is_processed = True
                 db_session.commit()
                 return
 
-            docs = BotBrain.get_relevant_documents(email.content)
-            save_fn_resp = self.llm_client.send_message_with_functions(
-                **save_user_info_functions(email_chain=email.email_chain(), existing_user_docs=docs)
-            )
-
-            try:
-                if save_fn_resp.get("tool_calls"): # and save_fn_resp.get("tool_calls")[0].get("function").get("arguments").get("save_document"):
-                    resp_args = json.loads(save_fn_resp.get("tool_calls")[0].get("function").get("arguments"))
-                    if resp_args.get("save_document"):
-                        new_docs = resp_args.get("user_notes")
-                        print("Going to save docs: ", new_docs)
-                        for new_doc in new_docs:
-                            doc_id = BotBrain.add_document(new_doc, { 'user_id': email.sender_user.id })
-                            print("Saved doc ", doc_id)
-                else:
-                    print("Skipping saving a user info doc")
-                    print("save_fn_resp: ", save_fn_resp)
-            except:
-                print("Error trying to navigate response.\nSkipping saving a user info doc")
-                print("save_fn_resp: ", save_fn_resp)
+            EventBus.dispatch_event('email_received', email)
+            # docs = BotBrain.get_relevant_documents(email.content)
+            # save_fn_resp = cls.llm_client.send_message_with_functions(
+            #     **save_user_info_functions(email_chain=email.email_chain(), existing_user_docs=docs)
+            # )
+            # 
+            # try:
+            #     if save_fn_resp.get("tool_calls"): # and save_fn_resp.get("tool_calls")[0].get("function").get("arguments").get("save_document"):
+            #         resp_args = json.loads(save_fn_resp.get("tool_calls")[0].get("function").get("arguments"))
+            #         if resp_args.get("save_document"):
+            #             new_docs = resp_args.get("user_notes")
+            #             print("Going to save docs: ", new_docs)
+            #             for new_doc in new_docs:
+            #                 doc_id = BotBrain.add_document(new_doc, { 'user_id': email.sender_user.id })
+            #                 print("Saved doc ", doc_id)
+            #     else:
+            #         print("Skipping saving a user info doc")
+            #         print("save_fn_resp: ", save_fn_resp)
+            # except:
+            #     print("Error trying to navigate response.\nSkipping saving a user info doc")
+            #     print("save_fn_resp: ", save_fn_resp)
 
             docs = Zettelkasten.get_relevant_documents([email.content])
             print('found ', len(docs), ' relevant docs')
 
             email_chain = email.email_chain()
-            response = self.llm_client.send_message(**chat_prompt(emails=email_chain, docs=docs))['content']
-            self.send_response(email, response)
+            response = cls.llm_client.send_message(**chat_prompt(emails=email_chain, docs=docs))['content']
+            cls.send_response(email, response)
 
             return response
         except Exception as e:
             print("Could not process email: ", email, " due to exception ", e)
-            self.print_traceback(e)
+            cls.print_traceback(e)
 
 def chat_prompt(**kwargs):
     # doc string:
@@ -96,62 +97,4 @@ If the topic is personal, your goal is to learn what topics the user is interest
     })
     return {
         'messages': chatMessages,
-    }
-
-
-def save_user_info_functions(**kwargs):
-    ''' kwargs {
-        email_chain: Array<Email>,
-        existing_user_docs: Array<string>,
-    }
-    '''
-    messages = email_chain_to_prompt_messages(kwargs.get('email_chain'))
-    messages.append({
-        "role": "system",
-        "content": "Based on the messages exchanged above, decide whether to record some information about the user. The goal is to gain a better understanding of the user's preferences and personality. Use the function save_user_info to save the note.\n\nIf you write a note about the user, make sure it is concise but detailed.\n\nIf you decide not to write a note, simply pass False to the save_document argument."
-    })
-    if kwargs.get('existing_user_docs') is not None:
-        messages.append({
-            "role": "system",
-            "content": "Below are some of the existing notes you have recorded about the user."
-        })
-        for user_doc in kwargs.get('existing_user_docs'):
-            messages.append({
-                "role": "system",
-                "content": "<note>" + user_doc + "</note>"
-            })
-    messages.append({
-        "role": "system",
-        "content": "Generate the most informative note, or notes, that will reveal the most about the user's preferences and personality beyond what has already been answered above. Represent the notes for efficiency in conveying the user's preferences and personality. Make sure your notes addresses different aspects of the user than the notes that have already been written. The notes should be bite-sized, information dense, and distinct from each other. Err on the side of too few notes rather than too many. It's okay to not write any notes. Please determine the most insight array of notes to generate:"
-    })
-    return {
-        "messages": messages,
-        "tools": [{
-            "type": "function",
-            "function": {
-                "name": "save_user_info",
-                "description": "Saves a document that is tagged as containing information about the user. This is used for understanding the personality and preferences of a user.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "user_notes": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "description": "Array of text notes about a user. Each text will be saved in a database to be recalled later. Ensure that each note is distinct from each other, terse, and information dense. This parameter can be an empty array if there is no information worth storing.",
-                            },
-                        },
-                        "save_document": {
-                            "type": "boolean",
-                            "description": "If this argument is set to True, the notes in user_notes will be saved to the database. If this is set to False, no notes will be saved. Set this to False if the notes generated are not worth keeping.",
-                        },
-                    },
-                },
-            }
-        }], # TBD: implement request in dialogue, then implement saving
-        "tool_choice": {
-            "type": "function",
-            "function": { "name": "save_user_info" }
-        },
-        "use_slow_model": True
     }

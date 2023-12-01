@@ -31,7 +31,8 @@ metadata
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
 class ZettelkastenSkill(SkillBase):
-    def save_document(self, email):
+    @classmethod
+    def save_document(cls, email):
         title = email.subject
         if title == '':
             title = str(int(time.time()*1000))
@@ -111,8 +112,8 @@ class Zettelkasten(DocumentsBase):
 
 
 class FileFilterService:
-    def __init__(self):
-        self.content_marker = '## ؜'
+    def __init__(cls):
+        cls.content_marker = '## ؜'
 
     @classmethod
     def add_documents_from_folder(cls, folderPath):
@@ -141,14 +142,14 @@ class FileFilterService:
         print("Made ", numDocsMade, " docs")
         print("Skipped ", numFilesSkipped, " files because they already existed")
 
-    def filter_out_metadata(self, text: str) -> str:
-        current_depth = self.content_marker.count('#')
+    def filter_out_metadata(cls, text: str) -> str:
+        current_depth = cls.content_marker.count('#')
         recording = True
         lines = text.split('\n')
         filtered_lines = []
 
         for line in lines:
-            if self.content_marker and line == self.content_marker:
+            if cls.content_marker and line == cls.content_marker:
                 recording = True
                 continue
             elif line.startswith('#') and '# ' in line:

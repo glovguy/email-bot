@@ -1,23 +1,25 @@
 import json
-from src.prompts import *
 from src.skills.base import SkillBase, email_chain_to_prompt_messages, MASTER_AI_PERSONA_PROMPT
+from src.skills.zettelkasten_skill import Zettelkasten
 
 class BSHRSkill(SkillBase):
-    def compose_clarifying_questions(self, email):
-        msg = self.llm_client.send_message_with_functions(**clarifications_prompt_with_skip_function(query=email.content))
+    @classmethod
+    def compose_clarifying_questions(cls, email):
+        msg = cls.llm_client.send_message_with_functions(**clarifications_prompt_with_skip_function(query=email.content))
         if msg.get("tool_calls"):
             return
         return msg['content']
 
-    def BSHR_single_round_chat(self, email):
+    @classmethod
+    def BSHR_single_round_chat(cls, email):
         # First ask for any clarifications from user
         if len(email.email_chain()) == 1:
-            clarifying_questions = self.compose_clarifying_questions(email)
+            clarifying_questions = cls.compose_clarifying_questions(email)
             if clarifying_questions is not None:
-                self.send_response(email, clarifying_questions)
+                cls.send_response(email, clarifying_questions)
                 return
 
-        response_message = self.llm_client.send_message_with_functions(
+        response_message = cls.llm_client.send_message_with_functions(
             **BSHR_brainstorm_wikipedia(email.email_chain())
         )
         print("\n\nsearch_queries_json: ", response_message)
@@ -31,11 +33,11 @@ class BSHRSkill(SkillBase):
         wikipedia_search_results = []
         search_urls = []
         for query in search_queries:
-            content, url = self.search_wikipedia(query)
+            content, url = cls.search_wikipedia(query)
             wikipedia_search_results.append(content)
             search_urls.append(url)
 
-        msg = self.llm_client.send_message_with_functions(
+        msg = cls.llm_client.send_message_with_functions(
             **BSHR_brainstorm_zettelkasten(email.email_chain())
         )
         print("zettelkasten_queries: ", msg)
@@ -47,7 +49,7 @@ class BSHRSkill(SkillBase):
             print("Failed to get Zettelkasten queries due to error: ", err)
             zettels = []
 
-        response = self.llm_client.send_message(
+        response = cls.llm_client.send_message(
             **BSHR_generate_hypothesis(
                 email_chain=email.email_chain(),
                 zettels=zettels,
@@ -56,7 +58,7 @@ class BSHRSkill(SkillBase):
             use_slow_model=True
         )['content']
 
-        self.send_response(email, response)
+        cls.send_response(email, response)
         return response
 
 

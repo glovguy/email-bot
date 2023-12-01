@@ -18,13 +18,13 @@ def tick():
     print(len(unprocessed_emails), " unprocessed emails.")
     for email in unprocessed_emails:
         print("Processing email: ", email)
-        ProcessEmailSkill().process(email)
+        ProcessEmailSkill.process(email)
 
 def ask_get_to_know_you():
-    GetToKnowYouSkill().ask_get_to_know_you(me)
+    GetToKnowYouSkill.ask_get_to_know_you(me)
 
 def ponder_wittgenstein():
-    PonderWittgensteinSkill().ponder_wittgenstein(me)
+    PonderWittgensteinSkill.ponder_wittgenstein(me)
 
 app = Flask(__name__)
 

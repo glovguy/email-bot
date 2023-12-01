@@ -1,10 +1,10 @@
 import random
-from src.prompts import *
 from src.skills.zettelkasten_skill import Zettelkasten
 from src.skills.base import SkillBase
 
 class PonderWittgensteinSkill(SkillBase):
-    def ponder_wittgenstein(self, user):
+    @classmethod
+    def ponder_wittgenstein(cls, user):
         pi_witt = open("pi_english.txt", "r").read()
         pi_entries = pi_witt.split("=======")
 
@@ -15,8 +15,8 @@ class PonderWittgensteinSkill(SkillBase):
         zettels = [d for d in zettel_search_results['documents'][0]]
 
         print("zettels count: ", len(zettels))
-        response = self.llm_client.send_message(**ponder_wittgenstein(wittgenstein_entries=picked_entries, zettels=zettels)).content
-        self.email_inbox.send_email(
+        response = cls.llm_client.send_message(**ponder_wittgenstein(wittgenstein_entries=picked_entries, zettels=zettels)).content
+        cls.email_inbox.send_email(
             user.email_address,
             f'Some thoughts about Wittgenstein {picked_index}.',
             "Wittgenstein:" +
