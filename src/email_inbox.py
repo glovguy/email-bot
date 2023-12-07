@@ -96,6 +96,7 @@ class EmailSession:
         """Connects to the SMTP email server."""
         SMTP_HOST = config('SMTP_HOST', default='smtp.gmail.com')
         SMTP_PORT = config('SMTP_PORT', default=587, cast=int)  # Default port for TLS encryption
+        EMAIL_PASSWORD = config('EMAIL_PASSWORD')
 
         self.smtp_server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
         self.smtp_server.starttls()  # Upgrade the connection to secure encrypted SSL/TLS

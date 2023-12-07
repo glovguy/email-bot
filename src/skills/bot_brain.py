@@ -18,23 +18,24 @@ metadata
     content
     vectored_content
     user_id
+    namespace
 }
 '''
 
 class BotBrain(DocumentsBase):
     @classmethod
-    def get_relevant_documents(cls, doc_strings, n_results=5, where={}, include=['documents']):
+    def get_relevant_documents(cls, namespace, doc_strings, where, n_results=5, include=['documents']):
         results = botbrain_collection.query(
             query_texts=doc_strings,
             n_results=n_results,
-            where=where,
+            where={ "$and": [ {**where}, {"namespace": namespace}] },
             where_document={},
             include=include
         )
         return results
 
     @classmethod
-    def add_document(cls, doc_string, metadata={}):
+    def add_document(cls, namespace, doc_string, metadata={}):
         if doc_string == '' or metadata.get('user_id') is None:
             return
 
@@ -44,9 +45,11 @@ class BotBrain(DocumentsBase):
         sha = cls.doc_sha(doc_string)
         now = cls.now_str()
         meta = {
+            **metad,
+            "namespace": namespace,
             "sha": sha,
             "created_at": now,
-            **metad
+            "last_modified_at": now,
         }
         botbrain_collection.add(
             documents=[doc_string],
@@ -56,12 +59,25 @@ class BotBrain(DocumentsBase):
         return uuid
 
     @classmethod
-    def get_document(cls, **kwargs):
+    def get_document(cls, namespace, uuid=None, **kwargs):
         '''e.g. get_document(sha="foo-bar")'''
         ids = []
-        if kwargs.get('uuid') is not None:
-            ids = [kwargs.get('uuid')]
+        if uuid is not None:
+            ids = [uuid]
+        print('hdsjkdsfkjd', uuid, { "$and": [{**kwargs}, {"namespace": namespace}] })
         return botbrain_collection.get(
             ids=ids,
-            where=kwargs
+            where={ "$and": [{**kwargs}, {"namespace": namespace}] }
+        )
+
+    @classmethod
+    def update_document(cls, namespace, id, doc_string):
+        metad = {
+            "namespace": namespace,
+            "last_modified_at": cls.now_str()
+        }
+        botbrain_collection.update(
+            ids=[id],
+            metadatas=[metad],
+            documents=[doc_string],
         )
