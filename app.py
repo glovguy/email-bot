@@ -55,7 +55,7 @@ def hello_world():
 
 
 if __name__ == '__main__':
-    # tick()
+    tick()
     # ponder_wittgenstein()
     scheduler = APScheduler()
     scheduler.init_app(app)

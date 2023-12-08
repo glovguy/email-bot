@@ -1,7 +1,7 @@
 from src.event_bus import EventBus
 from src.skills.base import SkillBase, email_chain_to_prompt_messages, MASTER_AI_PERSONA_PROMPT
 from src.authorization import Authorization
-from src.skills.zettelkasten_skill import Zettelkasten
+from src.skills.zettelkasten_skill import Zettelkasten, ZettelkastenSkill
 from src.models import db_session
 
 class ProcessEmailSkill(SkillBase):
@@ -24,7 +24,7 @@ class ProcessEmailSkill(SkillBase):
                 return None
 
             if email.recipient_is_save_address():
-                cls.save_document(email)
+                ZettelkastenSkill.save_document(email)
                 email.is_processed = True
                 db_session.commit()
                 return
