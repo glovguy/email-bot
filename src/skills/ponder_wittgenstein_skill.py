@@ -60,7 +60,7 @@ def ponder_wittgenstein(**kwargs):
             })
     messages.append({
         "role": "system",
-        "content": "Professor, I'd be so happy if you could share your thoughts. Please discuss at length the above Wittgenstein quotes and their relevance to large language models. We are looking for a unique spin on these passages. (You may use the user's notes above to understand what the user finds to be interesting, but you need not reference them.)\n\nBe creative and have fun! Looking forward to hearing from you!"
+        "content": "Professor, I'd be so happy if you could share your thoughts. Please discuss at length the above Wittgenstein quotes and their relevance to large language models. We are looking for a unique spin on these passages. Let's think it through step by step. (You may use the user's notes above to understand what the user finds to be interesting, but you need not reference them.)\n\nBe creative and have fun! Looking forward to hearing from you!"
     })
     return {
         "messages": messages,

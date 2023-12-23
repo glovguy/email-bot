@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 
 DATABASE_URL = "sqlite:///email_bot.db"
-SAVE_EMAIL_ADDRESS = config('SAVE_EMAIL_ADDRESS')
+EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 
 engine = create_engine(DATABASE_URL, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
@@ -101,8 +101,8 @@ class Email(Base):
             return f"{parent_email.thread_path}/{current_message_id}"
         return f"/{in_reply_to}/{current_message_id}"
     
-    def recipient_is_save_address(self):
-        return SAVE_EMAIL_ADDRESS in self.recipients
+    def recipient_is_chat_address(self):
+        return EMAIL_ADDRESS in self.recipients
     
     def email_chain(self):
         msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']

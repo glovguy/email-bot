@@ -44,10 +44,10 @@ class EmailInbox:
             # If something goes wrong, mark the email as unread again
             self.server.remove_flags(email_uid, ['\\Seen'])
 
-    def send_email(self, recipient, subject, body, parent_email=None):
+    def send_email(self, recipient, subject, body, parent_email=None, sender_email=None):
         """Send an email to the specified recipient."""
         msg = MIMEText(body)
-        msg['From'] = EMAIL_ADDRESS
+        msg['From'] = sender_email or EMAIL_ADDRESS
         msg['To'] = recipient
         msg['Subject'] = subject
         message_id = make_msgid(str(uuid6.uuid7()), domain=EMAIL_DOMAIN) # f"<{}@{EMAIL_DOMAIN}>"
@@ -57,12 +57,12 @@ class EmailInbox:
             msg['In-Reply-To'] = parent_email.message_id
             msg['References'] = parent_email.thread_path.replace('/',',')
 
-        with self.email_session.connect_smtp() as server:
-            server.sendmail(EMAIL_ADDRESS, [recipient], msg.as_string())
+        with self.email_session.connect_smtp(msg['From']) as server:
+            server.sendmail(msg['From'], [recipient], msg.as_string())
         
         print(f"Sent email to {recipient} with subject '{subject}'")
         email_instance = Email(
-            sender=EMAIL_ADDRESS,
+            sender=msg['From'],
             recipients=[recipient],
             subject=recipient,
             content=body,
@@ -92,7 +92,7 @@ class EmailSession:
         print("Successfully connected to the IMAP email server.")
         return self.server
     
-    def connect_smtp(self):
+    def connect_smtp(self, sender_email_address):
         """Connects to the SMTP email server."""
         SMTP_HOST = config('SMTP_HOST', default='smtp.gmail.com')
         SMTP_PORT = config('SMTP_PORT', default=587, cast=int)  # Default port for TLS encryption
@@ -100,7 +100,8 @@ class EmailSession:
 
         self.smtp_server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
         self.smtp_server.starttls()  # Upgrade the connection to secure encrypted SSL/TLS
-        self.smtp_server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        email_address = sender_email_address or EMAIL_ADDRESS
+        self.smtp_server.login(email_address, EMAIL_PASSWORD)
         print("Successfully connected to the SMTP email server.")
         return self.smtp_server
 

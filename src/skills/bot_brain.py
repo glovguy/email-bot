@@ -65,9 +65,13 @@ class BotBrain(DocumentsBase):
         if uuid is not None:
             ids = [uuid]
         print('hdsjkdsfkjd', uuid, { "$and": [{**kwargs}, {"namespace": namespace}] })
+        if len(kwargs) > 0:
+            where = { "$and": [{**kwargs}, {"namespace": namespace}] }
+        else:
+            where = {"namespace": namespace}
         return botbrain_collection.get(
             ids=ids,
-            where={ "$and": [{**kwargs}, {"namespace": namespace}] }
+            where=where
         )
 
     @classmethod

@@ -1,6 +1,7 @@
 import json
 import datetime
-from src.event_bus import EventBus
+from flask import Flask
+from src.event_bus import register_event_listener
 from src.skills.zettelkasten_skill import Zettelkasten
 from src.models import Email
 from src.skills.base import SkillBase, email_chain_to_prompt_messages
@@ -30,6 +31,7 @@ class GetToKnowYouSkill(SkillBase):
         return response
 
     @classmethod
+    @register_event_listener('email_received')
     def save_user_info(cls, email):
         existing_user_doc = BotBrain.get_document(GET_TO_KNOW_DOC_NAMESPACE, None, user_id=email.sender_user.id)
         save_fn_resp = cls.llm_client.send_message_with_functions(
@@ -58,8 +60,6 @@ class GetToKnowYouSkill(SkillBase):
     @classmethod
     def user_interests_doc_id(cls, email_address):
         return email_address + "-interests"
-
-EventBus.add_listener('email_received', GetToKnowYouSkill.save_user_info)
 
 def ask_get_to_know_user(**kwargs):
     ''' kwargs {

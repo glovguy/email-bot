@@ -6,6 +6,7 @@ from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import Email, User
+import src.views.skills
 
 me = User.query.filter_by(name=config('ME')).first()
 
@@ -53,11 +54,13 @@ app.config['JOBS'] = [
 def hello_world():
     return "<p>Hello, World!</p>"
 
+app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
     tick()
     # ponder_wittgenstein()
+    # ask_get_to_know_you()
     scheduler = APScheduler()
     scheduler.init_app(app)
     scheduler.start()
-    app.run()
+    app.run(debug=True, use_reloader=True)

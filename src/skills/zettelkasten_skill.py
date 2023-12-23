@@ -2,6 +2,7 @@ from decouple import config
 import os
 import time
 from src.skills.base import DocumentsBase, SkillBase, chroma_client, default_embeddings_model
+from src.event_bus import register_event_listener
 
 def zettel_note_embed(doc_string):
     instruction = "Represent the personal Zettelkasten note for storing and retrieving personal insights: "
@@ -31,7 +32,9 @@ metadata
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
 class ZettelkastenSkill(SkillBase):
+
     @classmethod
+    @register_event_listener('email_received')
     def save_document(cls, email):
         title = email.subject
         if title == '':
@@ -53,7 +56,7 @@ class ZettelkastenSkill(SkillBase):
 
 class Zettelkasten(DocumentsBase):
     @classmethod
-    def get_relevant_documents(cls, doc_strings, n_results=7, where={}, include=['documents']):
+    def get_relevant_documents(cls, doc_strings, n_results=25, where={}, include=['documents']):
         results = documents_collection.query(
             query_texts=doc_strings,
             n_results=n_results,
@@ -61,7 +64,7 @@ class Zettelkasten(DocumentsBase):
             where_document={},
             include=include
         )
-        # I could put in a relevance_threshold filter?
+        # I could put in re-ranking?
         return results
 
     @classmethod
