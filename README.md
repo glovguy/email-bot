@@ -1,19 +1,15 @@
 # email-bot
 
-## skills
+This repository contains the code for an email bot. The bot utilizes event-driven LLMs (Language Models) and vector storage to maintain state and functionality.
 
-Often a first step for maintaining state with bots is to use a combination of prompts and the chat thread history. This has the upside of keeping track of state in an intuitive and easy to implement way. The downside is that it can be difficult to maintain very long threads, as well as it can be difficult to share state between threads.
+## Skills
 
-Instead, I focus on pairing event-driven LLMs with vector storage. I don't like the term "agent", so I call these "skills". These are analogous to objects in OOP, since they maintain state as well as functionality.
+Skills are analogous to objects in Object-Oriented Programming (OOP). They listen to incoming events and store free text in vector storage. This approach allows for intuitive state management and easy implementation.
 
-Skills listen to incoming events and maintain free text in vector storage.
+## BotBrain
 
-### BotBrain
+BotBrain is the document storage collection for documents managed by the AI. It enables the creation, editing, and deletion of documents without human intervention. The vector storage collection is namespaced for each skill, allowing all data to be stored in one document store.
 
-BotBrain is the document storage collection for documents managed by the AI. These should be expected to be created, edited, and deleted without needing any human intervention.
+## Zettelkasten
 
-The vector storage collection is namespaced for each skill so that all data can go in one document store without necessarily coming out of any arbitrary query.
-
-### Zettelkasten
-
-The Zettelkasten is the document storage maintained by the users. These are meant to be created, edited, and deleted by the users who own them.
+The Zettelkasten is the document storage maintained by the users. Users can create, edit, and delete their own documents in this storage.

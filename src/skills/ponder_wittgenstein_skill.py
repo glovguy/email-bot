@@ -64,6 +64,6 @@ def ponder_wittgenstein(**kwargs):
     })
     return {
         "messages": messages,
-        "temperature": 0.95,
+        "temperature": 1.05,
         "use_slow_model": True
     }
