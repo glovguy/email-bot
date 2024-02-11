@@ -6,6 +6,7 @@ from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import Email, User
+from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementService
 import src.views.skills
 
 me = User.query.filter_by(name=config('ME')).first()
@@ -58,6 +59,7 @@ app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
     tick()
+    FileManagementService.sync_documents_from_folder(LOCAL_DOCS_FOLDER)
     # ponder_wittgenstein()
     # ask_get_to_know_you()
     scheduler = APScheduler()
