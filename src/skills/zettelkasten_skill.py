@@ -32,7 +32,6 @@ metadata
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
 class ZettelkastenSkill(SkillBase):
-
     @classmethod
     @register_event_listener('email_received')
     def save_document(cls, email):
@@ -55,6 +54,14 @@ class ZettelkastenSkill(SkillBase):
         return doc_uuid
 
 class Zettelkasten(DocumentsBase):
+    @classmethod
+    def get_documents(cls, ids=None, where={}):
+        '''e.g. get_document(sha="foo-bar")'''
+        return documents_collection.get(
+            ids=ids,
+            where=where
+        )
+
     @classmethod
     def get_relevant_documents(cls, doc_strings, n_results=25, where={}, include=['documents']):
         results = documents_collection.query(
@@ -81,6 +88,7 @@ class Zettelkasten(DocumentsBase):
         meta = {
             "sha": sha,
             "created_at": now,
+            "last_modified_at": now,
             **metad
         }
         documents_collection.add(
@@ -93,7 +101,7 @@ class Zettelkasten(DocumentsBase):
     @classmethod
     def check_for_existing_email_doc(cls, email):
         sha = cls.doc_sha(email.content)
-        return cls.get_document(**{ '$or': [{'sha': sha}, {'source_email_id': email.id}] })
+        return cls.get_documents(where={ '$or': [{'sha': sha}, {'source_email_id': email.id}] })
 
     @classmethod
     def check_for_existing_file_doc(cls, fileStr):
@@ -104,22 +112,23 @@ class Zettelkasten(DocumentsBase):
         )
 
     @classmethod
-    def get_document(cls, **kwargs):
-        '''e.g. get_document(sha="foo-bar")'''
-        ids = []
-        if kwargs.get('uuid') is not None:
-            ids = [kwargs.get('uuid')]
-        return documents_collection.get(
-            ids=ids,
-            where=kwargs
-        )
-
-    @classmethod
     def upsert_documents(cls, ids, metadatas, documents):
+        now = cls.now_str()
+        metads = [{**m, "last_modified_at": now} for m in metadatas]
         return documents_collection.update(
             ids=ids,
-            metadatas=metadatas,
+            metadatas=metads,
             documents=documents,
+        )
+    
+    @classmethod
+    def update_document_metadata(cls, ids, metadatas):
+        existing_metadatas = documents_collection.get(ids)['metadatas']
+        now = cls.now_str()
+        metads = [{ **existing_metadatas[i], **metadatas, "last_modified_at": now } for i in range(0, len(metadatas))]
+        return documents_collection.update(
+            ids=ids,
+            metadatas=metads,
         )
 
     @classmethod
@@ -136,7 +145,7 @@ class FileManagementService:
     @classmethod
     def remove_empty_documents(cls):
         empty_string_sha = Zettelkasten.doc_sha('')
-        docs = Zettelkasten.get_document(sha=empty_string_sha)
+        docs = Zettelkasten.get_documents(where={"sha":empty_string_sha})
         if len(docs.get('ids')) > 0:
             print("Deleting ", len(docs.get('ids')), " empty docs")
             print(docs)
@@ -155,7 +164,7 @@ class FileManagementService:
         numFilesMetadataUpdated = 0
         numFilesDeleted = 0
         allShasInFiles = set()
-        allDocs = Zettelkasten.get_document()
+        allDocs = Zettelkasten.get_documents()
         print(len(allDocs.get('ids')), " synced docs in db")
         items = os.listdir(folderPath)
         for item in items:
@@ -211,7 +220,7 @@ class FileManagementService:
                         numExistingFilesSkipped += 1
                     continue
         # Remove docs in db without file
-        allDocs = Zettelkasten.get_document()
+        allDocs = Zettelkasten.get_documents()
         docIdsToDelete = [allDocs.get('ids')[i] for i in range(0, len(allDocs.get('ids'))) if allDocs.get('metadatas')[i].get('sha') not in allShasInFiles]
         if len(docIdsToDelete) > 0:
             Zettelkasten.delete_documents(ids=docIdsToDelete)
@@ -223,13 +232,13 @@ class FileManagementService:
         print("Updated metadata to ", numFilesMetadataUpdated, " files")
         print("Deleted ", numFilesDeleted, " files with duplicate shas")
         print("Deleted ", len(docIdsToDelete), " docs without a corresponding file")
-        allDocsIds = Zettelkasten.get_document().get('ids')
+        allDocsIds = Zettelkasten.get_documents().get('ids')
         print("Now ", len(allDocsIds), " synced docs in db")
 
     @classmethod
     def delete_documents_missing_from_folder(cls, folderPath):
         numFilesDeleted = 0
-        docs = Zettelkasten.get_document()
+        docs = Zettelkasten.get_documents()
         items = [os.path.join(folderPath, item) for item in os.listdir(folderPath)]
         for i in range(0, len(docs.get('metadatas'))):
             metad = docs.get('metadatas')[i]

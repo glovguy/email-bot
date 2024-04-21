@@ -11,7 +11,7 @@ import src.views.skills
 
 me = User.query.filter_by(name=config('ME')).first()
 
-def tick():
+def check_mailbox():
     inbox = EmailInbox()
     emails = inbox.fetch_unread_emails()
     print(len(emails), " emails received")
@@ -33,7 +33,7 @@ app = Flask(__name__)
 app.config['JOBS'] = [
     {
         'id': 'check_and_process_unread_emails',
-        'func': 'app:tick',
+        'func': 'app:check_mailbox',
         'trigger': 'interval',
         'hours': 1
     },
@@ -58,7 +58,7 @@ def hello_world():
 app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
-    tick()
+    check_mailbox()
     FileManagementService.sync_documents_from_folder(LOCAL_DOCS_FOLDER)
     # ponder_wittgenstein()
     # ask_get_to_know_you()

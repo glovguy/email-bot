@@ -64,7 +64,6 @@ class BotBrain(DocumentsBase):
         ids = []
         if uuid is not None:
             ids = [uuid]
-        print('hdsjkdsfkjd', uuid, { "$and": [{**kwargs}, {"namespace": namespace}] })
         if len(kwargs) > 0:
             where = { "$and": [{**kwargs}, {"namespace": namespace}] }
         else:
