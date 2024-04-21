@@ -28,6 +28,7 @@ metadata
 }
 '''
 # TODO: Tidy up the messy sync scripts
+# Question: Should Zettelkasten notes always have user_id, even if synced locally?
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
 
