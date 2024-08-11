@@ -99,6 +99,19 @@ class DocumentsBase:
     def now_str(cls):
         return str(datetime.now())
 
+
+def generate_uuid():
+    return str(uuid6.uuid7())
+
+
+def doc_sha(doc_string):
+    return sha256(doc_string.encode('utf-8')).hexdigest()
+
+
+def now_str():
+    return str(datetime.now())
+
+
 def email_chain_to_prompt_messages(email_chain):
     messages = []
     emails = sorted(email_chain, key=lambda e: e.timestamp)

@@ -23,7 +23,8 @@ def check_mailbox():
         ProcessEmailSkill.process(email)
 
 def ask_get_to_know_you():
-    GetToKnowYouSkill.ask_get_to_know_you(me)
+    # GetToKnowYouSkill.ask_get_to_know_you(me, initial_doc)
+    GetToKnowYouSkill.ask_get_to_know_you_latest_zettelkasten_notes(me)
 
 def ponder_wittgenstein():
     PonderWittgensteinSkill.ponder_wittgenstein(me)
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     FileManagementService.sync_documents_from_folder(LOCAL_DOCS_FOLDER)
     # ponder_wittgenstein()
     # ask_get_to_know_you()
-    scheduler = APScheduler()
-    scheduler.init_app(app)
-    scheduler.start()
+    # scheduler = APScheduler()
+    # scheduler.init_app(app)
+    # scheduler.start()
     app.run(debug=True, use_reloader=True)
