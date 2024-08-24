@@ -1,7 +1,6 @@
 from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-
+from src.models import OAuthCredential
 
 flow = Flow.from_client_secrets_file(
     'client_secret.apps.googleusercontent.com.json',
@@ -25,4 +24,6 @@ class GmailClient():
     @classmethod
     def credentials_from_oauth_redirect(cls, request_url):
         flow.fetch_token(authorization_response=request_url)
-        return flow.credentials
+        user_id = 1 # TODO: make it not hard coded
+        creds = OAuthCredential.create_or_update(user_id, flow.credentials)
+        return creds.to_credentials()

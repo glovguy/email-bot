@@ -1,6 +1,7 @@
 from decouple import config
 from flask import Flask, request, redirect, session
 from flask_apscheduler import APScheduler
+from flask_migrate import Migrate
 from src.email_inbox import EmailInbox
 from src.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
@@ -10,9 +11,71 @@ from src.models import Email, User
 from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementService
 import src.views.skills
 import os
+from src.models import *
 
 
-me = User.query.filter_by(name=config('ME')).first()
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = os.urandom(24)
+    app.config['SQLALCHEMY_DATABASE_URI'] = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    db.init_app(app)
+
+    Migrate(app, db)
+
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db_session.remove()
+
+    return [app, db]
+
+[app, db] = create_app()
+
+
+@app.route('/')
+def home():
+    credential = OAuthCredential.query.filter_by(user_id=1).first()
+    if credential is None:
+        authorization_url, state = GmailClient.authorization_url()
+        session['state'] = state
+        return redirect(authorization_url)
+
+    return redirect("/emails")
+
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    GmailClient.credentials_from_oauth_redirect(request.url)
+    print("Credentials successfully created")
+    return redirect('/emails')
+
+
+@app.route('/emails')
+def emails_display():
+    credential = OAuthCredential.query.filter_by(user_id=1).first()
+    gmail_client = GmailClient(credential.to_credentials())
+
+    messages = gmail_client.messages()
+    gmail_service = gmail_client.gmail_service
+    
+    # Process and display email information
+    email_info = []
+    for message in messages:
+        msg = gmail_service.users().messages().get(userId='me', id=message['id']).execute()
+        email_data = msg['payload']['headers']
+        subject = next((header['value'] for header in email_data if header['name'] == 'Subject'), 'No Subject')
+        sender = next((header['value'] for header in email_data if header['name'] == 'From'), 'Unknown')
+        email_info.append(f"Subject: {subject}, From: {sender}")
+    
+    return "<br>".join(email_info)
+
+
+app.add_url_rule('/skills', view_func=src.views.skills.index)
+
+
+def current_user():
+    return User.query.filter_by(name=config('ME')).first()
 
 def check_mailbox():
     inbox = EmailInbox()
@@ -27,13 +90,11 @@ def check_mailbox():
 
 def ask_get_to_know_you():
     # GetToKnowYouSkill.ask_get_to_know_you(me, initial_doc)
-    GetToKnowYouSkill.ask_get_to_know_you_latest_zettelkasten_notes(me)
+    GetToKnowYouSkill.ask_get_to_know_you_latest_zettelkasten_notes(current_user())
 
 def ponder_wittgenstein():
-    PonderWittgensteinSkill.ponder_wittgenstein(me)
+    PonderWittgensteinSkill.ponder_wittgenstein(current_user())
 
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
 
 app.config['JOBS'] = [
     {
@@ -56,34 +117,6 @@ app.config['JOBS'] = [
     }
 ]
 
-@app.route('/')
-def home():
-    authorization_url, state = GmailClient.authorization_url()
-    session['state'] = state
-    return redirect(authorization_url)
-
-@app.route('/oauth2callback')
-def oauth2callback():
-    credentials = GmailClient.credentials_from_oauth_redirect(request.url)
-    print("\n\ncredentials:\n\n",credentials,"\n\n")
-    
-    gmail_client = GmailClient(credentials)
-
-    messages = gmail_client.messages()
-    gmail_service = gmail_client.gmail_service
-    
-    # Process and display email information
-    email_info = []
-    for message in messages:
-        msg = gmail_service.users().messages().get(userId='me', id=message['id']).execute()
-        email_data = msg['payload']['headers']
-        subject = next((header['value'] for header in email_data if header['name'] == 'Subject'), 'No Subject')
-        sender = next((header['value'] for header in email_data if header['name'] == 'From'), 'Unknown')
-        email_info.append(f"Subject: {subject}, From: {sender}")
-    
-    return "<br>".join(email_info)
-
-app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
@@ -94,4 +127,6 @@ if __name__ == '__main__':
     # scheduler = APScheduler()
     # scheduler.init_app(app)
     # scheduler.start()
-    app.run(port=5000, debug=True, use_reloader=True)
+    init_db()
+    with app.app_context():
+        app.run(port=5000, debug=True, use_reloader=True)

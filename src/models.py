@@ -1,23 +1,42 @@
+from datetime import datetime
+import json
 from decouple import config
 from email.utils import getaddresses
+from flask_sqlalchemy import SQLAlchemy
+from google.oauth2.credentials import Credentials
 from pyzmail import PyzMessage
-from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, ForeignKey, func
+from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 
-DATABASE_URL = "sqlite:///email_bot.db"
+
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 
-engine = create_engine(DATABASE_URL, convert_unicode=True)
-db_session = scoped_session(sessionmaker(autocommit=False,
-                                         autoflush=False,
-                                         bind=engine))
+POSTGRES_USERNAME = config("POSTGRES_USERNAME")
+POSTGRES_PASSWORD = config("POSTGRES_PASSWORD")
+POSTGRES_DATABASE_NAME = "bot_memory"
+
+POSTGRES_DATABASE_URL = URL.create(
+    drivername="postgresql+psycopg2",
+    username=POSTGRES_USERNAME,
+    password=POSTGRES_PASSWORD,
+    host="localhost",
+    port=5432,
+    database=POSTGRES_DATABASE_NAME,
+)
+SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
+
+engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 Base = declarative_base()
 Base.query = db_session.query_property()
 
+db = SQLAlchemy()
 
-class Email(Base):
+
+class Email(db.Model):
     __tablename__ = 'emails'
 
     id = Column(Integer, primary_key=True)
@@ -109,13 +128,14 @@ class Email(Base):
         return Email.query.filter(Email.message_id.in_(msg_ids)).all()
 
 
-class User(Base):
+class User(db.Model):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
     email_address = Column(String, unique=True, nullable=False)
     name = Column(String(255), nullable=False)
     emails = relationship("Email", order_by=Email.id, back_populates="sender_user")
+    oauth_credential = relationship("OAuthCredential", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
@@ -126,6 +146,69 @@ class User(Base):
         if self.signatures_csv:
             return self.signatures_csv.split(',')
         return []
+
+
+class OAuthCredential(db.Model):
+    __tablename__ = "oauth_credential"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="oauth_credential")
+    token = Column(Text, nullable=False)
+    refresh_token = Column(String(512), nullable=True)
+    token_uri = Column(String(512), nullable=False)
+    client_id = Column(String(512), nullable=False)
+    client_secret = Column(String(512), nullable=False)
+    scopes = Column(Text, nullable=True)
+    expiry = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f'<OAuthCredential user_id: {self.user_id} expiry: {self.expiry}>'
+
+    @property
+    def is_expired(self):
+        if self.expiry:
+            return datetime.utcnow() > self.expiry
+        return True
+
+    @classmethod
+    def create_or_update(cls, user_id, credentials):
+        credential = cls.query.filter_by(user_id=user_id).first()
+        if credential:
+            credential.token = credentials.token
+            credential.refresh_token = credentials.refresh_token
+            credential.token_uri = credentials.token_uri
+            credential.client_id = credentials.client_id
+            credential.client_secret = credentials.client_secret
+            credential.scopes = json.dumps(credentials.scopes)
+            credential.expiry = credentials.expiry
+        else:
+            credential = cls(
+                user_id=user_id,
+                token=credentials.token,
+                refresh_token=credentials.refresh_token,
+                token_uri=credentials.token_uri,
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret,
+                scopes=json.dumps(credentials.scopes),
+                expiry=credentials.expiry
+            )
+            db_session.add(credential)
+
+        db_session.commit()
+        return credential
+
+    def to_credentials(self):
+        return Credentials(
+            token=self.token,
+            refresh_token=self.refresh_token,
+            token_uri=self.token_uri,
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            scopes=json.loads(self.scopes) if self.scopes else None
+        )
 
 
 def init_db():
