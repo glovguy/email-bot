@@ -46,7 +46,7 @@ def home():
 
 @app.route('/oauth2callback')
 def oauth2callback():
-    GmailClient.credentials_from_oauth_redirect(request.url)
+    GmailClient.credentials_from_oauth_redirect(request.url, current_user().id)
     print("Credentials successfully created")
     return redirect('/emails')
 

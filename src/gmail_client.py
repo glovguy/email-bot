@@ -22,8 +22,7 @@ class GmailClient():
         return flow.authorization_url()
     
     @classmethod
-    def credentials_from_oauth_redirect(cls, request_url):
+    def credentials_from_oauth_redirect(cls, request_url, user_id):
         flow.fetch_token(authorization_response=request_url)
-        user_id = 1 # TODO: make it not hard coded
         creds = OAuthCredential.create_or_update(user_id, flow.credentials)
         return creds.to_credentials()
