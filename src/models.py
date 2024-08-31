@@ -40,37 +40,27 @@ class Email(db.Model):
     __tablename__ = 'emails'
 
     id = Column(Integer, primary_key=True)
-    gmail_id = Column(String, nullable=False)
+    gmail_id = Column(String, nullable=False, unique=True)
     thread_id = Column(String, nullable=True)
     snippet = Column(String, nullable=True)
     from_email_address = Column(String, nullable=False)
     to_email_address = Column(String, nullable=False)
     subject = Column(String, nullable=False)
-
-
-    # sender = Column(String, nullable=False)
-    # recipients_csv = Column(String, nullable=False)
-    # subject = Column(String, nullable=False)
-    # content = Column(String, nullable=False)
-    # timestamp = Column(DateTime, default=func.now(), nullable=False)
-    # thread_path = Column(String)
-    # uid = Column(String) # UID from IMAP server
-    # message_id = Column(String) # unique ID for each message, used by messages to refer to each other
-    # sender_user_id = Column(Integer, ForeignKey('users.id'))
-    # sender_user = relationship("User", back_populates="emails")
-    # is_processed = Column(Boolean, default=False, nullable=False)
+    is_processed = Column(Boolean, default=False, nullable=False)
+    history_id = Column(String, nullable=True)
 
     @classmethod
     def from_raw_gmail(cls, raw_email):
         payload = raw_email["payload"]
-        parts = payload["parts"]
+        headers = payload["headers"]
         email_instance = Email(
             gmail_id=raw_email["id"],
             thread_id=raw_email["threadId"],
             snippet=raw_email["snippet"],
-            from_email_address=next((p["value"] for p in parts if p["name"] == "From")),
-            to_email_address=next((p["value"] for p in parts if p["name"] == "To")),
-            subject=next((p["value"] for p in parts if p["name"] == "Subject"))
+            from_email_address=next((p["value"] for p in headers if p["name"] == "From")),
+            to_email_address=next((p["value"] for p in headers if p["name"] == "To")),
+            subject=next((p["value"] for p in headers if p["name"] == "Subject")),
+            history_id=raw_email["historyId"]
         )
         db_session.add(email_instance)
         db_session.commit()
@@ -89,7 +79,7 @@ class EmailOld(db.Model):
     uid = Column(String) # UID from IMAP server
     message_id = Column(String) # unique ID for each message, used by messages to refer to each other
     sender_user_id = Column(Integer, ForeignKey('users.id'))
-    sender_user = relationship("User", back_populates="emails_old")
+    # sender_user = relationship("User", back_populates="emails_old")
     is_processed = Column(Boolean, default=False, nullable=False)
 
     def __repr__(self):
@@ -107,10 +97,6 @@ class EmailOld(db.Model):
             self.recipients_csv = ','.join(recipients_list)
         else:
             self.recipients_csv = None
-
-    @classmethod
-    def from_raw_oauth_email(cls, email_dict):
-        """Parse an email from the Oauth integration Gmail service"""
 
     @classmethod
     def from_raw_email(cls, raw_email, email_uid):
@@ -178,7 +164,8 @@ class User(db.Model):
     id = Column(Integer, primary_key=True)
     email_address = Column(String, unique=True, nullable=False)
     name = Column(String(255), nullable=False)
-    emails_old = relationship("EmailOld", order_by=EmailOld.id, back_populates="sender_user")
+    # emails = relationship("Email", order_by=Email.id, back_populates="sender_user")
+    # emails_old = relationship("EmailOld", order_by=EmailOld.id, back_populates="sender_user_old")
     oauth_credential = relationship("OAuthCredential", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 

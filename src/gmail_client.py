@@ -1,6 +1,7 @@
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from src.models import EmailOld, OAuthCredential
+from src.models import Email, EmailOld, OAuthCredential
+
 
 flow = Flow.from_client_secrets_file(
     'client_secret.apps.googleusercontent.com.json',
@@ -12,39 +13,54 @@ class GmailClient():
     def __init__(self, credentials) -> None:
         self.credentials = credentials
         self.gmail_service = build('gmail', 'v1', credentials=credentials)
-    
+
     def messages(self):
         results = self.gmail_service.users().messages().list(userId='me', maxResults=10).execute()
         return results.get('messages', [])
-    
+
     def get_message(self, email_id):
         return self.gmail_service.users().messages().get(userId='me', id=email_id).execute()
-    
-    def fetch_unread_emails(self):
-            results = self.gmail_service.users().messages().list(userId='me', q='is:unread').execute()
-            messages = results.get('messages', [])
-            
+
+    def fetch_emails(self):
+        return self.fetch_emails_full_sync()
+
+    def fetch_email_partial_sync(self):
+        pass
+        # get history_id from most recent email
+        # use history.list to get more recent emails
+        # https://developers.google.com/gmail/api/guides/sync#partial_synchronization
+
+    def fetch_emails_full_sync(self):
+        results = self.gmail_service.users().messages().list(userId='me').execute()
+        print(f"results keys: {results.keys()}")
+        nextPageToken = results.get("nextPageToken")
+        messages = results.get('messages', [])
+
+        new_emails = []
+        existing_email_ids = set([eml.gmail_id for eml in Email.query.all()]) # TODO: add filtering for user
+        while (len(messages) > 0):
+            print(f"page size of {len(messages)}")
             for message in messages:
-                email = self.get_message(message['id'])
-                # Create an Email entry in the database using the email data
-                
-                # Mark the email as "read" on the server
-                self.gmail_service.users().messages().modify(userId='me', id=message['id'], body={'removeLabelIds': ['UNREAD']}).execute()
-    
-    def create_email_entry(self, email_uid):
-        try:
-            raw_email = self.server.fetch(email_uid, ['BODY[]'])
-            # ['id', 'threadId', 'labelIds', 'snippet', 'payload', 'sizeEstimate', 'historyId', 'internalDate']
-            return EmailOld.from_raw_oauth_email(raw_email[email_uid], email_uid)
-        except Exception as e:
-            print("error creating email entry for uid: ", email_uid, " error: ", e)
-            # If something goes wrong, mark the email as unread again
-            self.server.remove_flags(email_uid, ['\\Seen'])
-    
+                if message['id'] in existing_email_ids:
+                    continue
+
+                raw_email = self.get_message(message['id'])
+                email = Email.from_raw_gmail(raw_email)
+                new_emails.append(email)
+            if nextPageToken is None:
+                break
+
+            results = self.gmail_service.users().messages().list(userId='me', pageToken=nextPageToken).execute()
+            print(f"results keys: {results.keys()}")
+            nextPageToken = results.get("nextPageToken", None)
+            messages = results.get('messages', [])
+
+        return new_emails
+
     @classmethod
     def authorization_url(cls):
         return flow.authorization_url()
-    
+
     @classmethod
     def credentials_from_oauth_redirect(cls, request_url, user_id):
         flow.fetch_token(authorization_response=request_url)

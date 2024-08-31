@@ -2,12 +2,11 @@ from decouple import config
 from flask import Flask, request, redirect, session
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
-from src.email_inbox import EmailInbox
 from src.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
-from src.models import EmailOld, User
+from src.models import User
 from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementService
 import src.views.skills
 import os
@@ -55,14 +54,11 @@ def oauth2callback():
 def emails_display():
     credential = OAuthCredential.query.filter_by(user_id=1).first()
     gmail_client = GmailClient(credential.to_credentials())
-
     messages = gmail_client.messages()
-    gmail_service = gmail_client.gmail_service
-    
-    # Process and display email information
+
     email_info = []
     for message in messages:
-        msg = gmail_service.users().messages().get(userId='me', id=message['id']).execute()
+        msg = gmail_client.get_message(message["id"])
         email_data = msg['payload']['headers']
         subject = next((header['value'] for header in email_data if header['name'] == 'Subject'), 'No Subject')
         sender = next((header['value'] for header in email_data if header['name'] == 'From'), 'Unknown')
@@ -78,15 +74,18 @@ def current_user():
     return User.query.filter_by(name=config('ME')).first()
 
 def check_mailbox():
-    inbox = EmailInbox()
-    emails = inbox.fetch_unread_emails()
-    print(len(emails), " emails received")
-    
-    unprocessed_emails = Email.query.filter_by(is_processed=0).all()
-    print(len(unprocessed_emails), " unprocessed emails.")
-    for email in unprocessed_emails:
-        print("Processing email: ", email)
-        ProcessEmailSkill.process(email)
+    print("checking mailbox...")
+    credential = OAuthCredential.query.filter_by(user_id=1).first()
+    gmail_client = GmailClient(credential.to_credentials())
+
+    new_emails = gmail_client.fetch_emails()
+    print(len(new_emails), " new emails received")
+
+    # unprocessed_emails = Email.query.filter_by(is_processed=False).all()
+    # print(len(unprocessed_emails), " unprocessed emails.")
+    # for email in unprocessed_emails:
+    #     print("Processing email: ", email)
+    #     ProcessEmailSkill.process(email)
 
 def ask_get_to_know_you():
     # GetToKnowYouSkill.ask_get_to_know_you(me, initial_doc)
@@ -120,7 +119,6 @@ app.config['JOBS'] = [
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
-    # check_mailbox()
     # FileManagementService.sync_documents_from_folder(LOCAL_DOCS_FOLDER)
     # ponder_wittgenstein()
     # ask_get_to_know_you()
@@ -129,4 +127,5 @@ if __name__ == '__main__':
     # scheduler.start()
     init_db()
     with app.app_context():
+        check_mailbox()
         app.run(port=5000, debug=True, use_reloader=True)
