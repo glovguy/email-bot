@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
 from dialogue import Dialogue
-from models import Email
+from models import EmailOld
 
 class DialogueTest(unittest.TestCase):
 
@@ -17,7 +17,7 @@ class DialogueTest(unittest.TestCase):
         mock_email_inbox_instance = Mock()
         mock_email_inbox.return_value = mock_email_inbox_instance
 
-        email = Email(sender="authorized@example.com", subject="Test Email", content="This is a test email.")
+        email = EmailOld(sender="authorized@example.com", subject="Test Email", content="This is a test email.")
         dialogue = Dialogue()
         
         response = dialogue.process(email)
@@ -38,7 +38,7 @@ class DialogueTest(unittest.TestCase):
         mock_email_inbox_instance = Mock()
         mock_email_inbox.return_value = mock_email_inbox_instance
 
-        email = Email(sender="unauthorized@example.com", subject="Test Email", content="This is a test email.")
+        email = EmailOld(sender="unauthorized@example.com", subject="Test Email", content="This is a test email.")
         dialogue = Dialogue()
         
         response = dialogue.process(email)

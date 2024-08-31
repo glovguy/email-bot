@@ -44,7 +44,7 @@ Content-Transfer-Encoding: quoted-printable
 ody>foo</body></html=>""" }
 
         # When: We use the from_raw_email method
-        email = models.Email.from_raw_email(raw_email, email_uid)
+        email = models.EmailOld.from_raw_email(raw_email, email_uid)
 
         # Then: The email should be correctly parsed
         self.assertEqual(email.sender, 'some_expected_sender@example.com')
@@ -65,12 +65,12 @@ ody>foo</body></html=>""" }
         }
 
         # When: We create an Email object and add it to the session
-        email = models.Email(**email_data)
+        email = models.EmailOld(**email_data)
         self.session.add(email)
         self.session.commit()
 
         # Then: We should be able to retrieve it from the database
-        retrieved_email = self.session.query(models.Email).filter_by(sender='test@example.com').first()
+        retrieved_email = self.session.query(models.EmailOld).filter_by(sender='test@example.com').first()
         self.assertIsNotNone(retrieved_email)
         self.assertEqual(retrieved_email.subject, 'Test Email')
         self.assertEqual(retrieved_email.content, 'This is a test email content')

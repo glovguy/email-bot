@@ -40,6 +40,46 @@ class Email(db.Model):
     __tablename__ = 'emails'
 
     id = Column(Integer, primary_key=True)
+    gmail_id = Column(String, nullable=False)
+    thread_id = Column(String, nullable=True)
+    snippet = Column(String, nullable=True)
+    from_email_address = Column(String, nullable=False)
+    to_email_address = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+
+
+    # sender = Column(String, nullable=False)
+    # recipients_csv = Column(String, nullable=False)
+    # subject = Column(String, nullable=False)
+    # content = Column(String, nullable=False)
+    # timestamp = Column(DateTime, default=func.now(), nullable=False)
+    # thread_path = Column(String)
+    # uid = Column(String) # UID from IMAP server
+    # message_id = Column(String) # unique ID for each message, used by messages to refer to each other
+    # sender_user_id = Column(Integer, ForeignKey('users.id'))
+    # sender_user = relationship("User", back_populates="emails")
+    # is_processed = Column(Boolean, default=False, nullable=False)
+
+    @classmethod
+    def from_raw_gmail(cls, raw_email):
+        payload = raw_email["payload"]
+        parts = payload["parts"]
+        email_instance = Email(
+            gmail_id=raw_email["id"],
+            thread_id=raw_email["threadId"],
+            snippet=raw_email["snippet"],
+            from_email_address=next((p["value"] for p in parts if p["name"] == "From")),
+            to_email_address=next((p["value"] for p in parts if p["name"] == "To")),
+            subject=next((p["value"] for p in parts if p["name"] == "Subject"))
+        )
+        db_session.add(email_instance)
+        db_session.commit()
+
+
+class EmailOld(db.Model):
+    __tablename__ = 'emails_old'
+
+    id = Column(Integer, primary_key=True)
     sender = Column(String, nullable=False)
     recipients_csv = Column(String, nullable=False)
     subject = Column(String, nullable=False)
@@ -49,11 +89,11 @@ class Email(db.Model):
     uid = Column(String) # UID from IMAP server
     message_id = Column(String) # unique ID for each message, used by messages to refer to each other
     sender_user_id = Column(Integer, ForeignKey('users.id'))
-    sender_user = relationship("User", back_populates="emails")
+    sender_user = relationship("User", back_populates="emails_old")
     is_processed = Column(Boolean, default=False, nullable=False)
 
     def __repr__(self):
-        return f"<Email(id={self.id}, uid={self.uid}, sender='{self.sender}', subject='{self.subject}')>"
+        return f"<EmailOld(id={self.id}, uid={self.uid}, sender='{self.sender}', subject='{self.subject}')>"
     
     @property
     def recipients(self):
@@ -69,9 +109,13 @@ class Email(db.Model):
             self.recipients_csv = None
 
     @classmethod
+    def from_raw_oauth_email(cls, email_dict):
+        """Parse an email from the Oauth integration Gmail service"""
+
+    @classmethod
     def from_raw_email(cls, raw_email, email_uid):
         """Parse a raw email and return an instance of the Email model."""
-        email = Email.query.filter_by(uid=email_uid).first()
+        email = EmailOld.query.filter_by(uid=email_uid).first()
         if email is not None:
             print("Email entry already exists for uid ", email_uid, ". Skipping.")
             return email
@@ -85,12 +129,12 @@ class Email(db.Model):
             # This is a hack for gmail, will need more general approach later
             [*main_body, _] = body.split("\nOn ")
             body = "\nOn ".join(main_body)
-        thread_path = Email.thread_path_from_parent(message_id, in_reply_to=in_reply_to)
+        thread_path = EmailOld.thread_path_from_parent(message_id, in_reply_to=in_reply_to)
         for sig in sender_user.signatures:
             body = body.replace(sig, '').strip()
         recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(msg.get_all('to', []))]
         
-        email_instance = Email(
+        email_instance = EmailOld(
             sender=msg.get_address('from')[1],
             recipients=recipients,
             subject=msg.get_subject(),
@@ -114,7 +158,7 @@ class Email(db.Model):
             return f"/{current_message_id}"
         
         if in_reply_to != '':
-            parent_email = Email.query.filter_by(message_id=in_reply_to).first()
+            parent_email = EmailOld.query.filter_by(message_id=in_reply_to).first()
         if parent_email is not None:
             print("Found parent email: ", parent_email)
             return f"{parent_email.thread_path}/{current_message_id}"
@@ -125,7 +169,7 @@ class Email(db.Model):
     
     def email_chain(self):
         msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']
-        return Email.query.filter(Email.message_id.in_(msg_ids)).all()
+        return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
 
 
 class User(db.Model):
@@ -134,7 +178,7 @@ class User(db.Model):
     id = Column(Integer, primary_key=True)
     email_address = Column(String, unique=True, nullable=False)
     name = Column(String(255), nullable=False)
-    emails = relationship("Email", order_by=Email.id, back_populates="sender_user")
+    emails_old = relationship("EmailOld", order_by=EmailOld.id, back_populates="sender_user")
     oauth_credential = relationship("OAuthCredential", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 

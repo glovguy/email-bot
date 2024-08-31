@@ -3,14 +3,14 @@ from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.email_inbox import EmailInbox, EmailSession, EMAIL_ADDRESS
-from src.models import Email, User, db_session
+from src.models import EmailOld, User, db_session
 
 class TestEmailInbox(unittest.TestCase):
 
     def setUp(self):
         # Create a temporary SQLite in-memory database for testing
         engine = create_engine('sqlite:///:memory:')
-        Email.metadata.create_all(engine)
+        EmailOld.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)
         self.session = Session()
 
@@ -32,9 +32,9 @@ class TestEmailInbox(unittest.TestCase):
             '3': {b'BODY[]': b'Email 3 Content'},
         }
         mock_from_raw_email.side_effect = iter([
-            Email(sender='foo@example.com', subject='My Favorite Subject 1', content='Email 1 Content', uid='1'),
-            Email(sender='foo@example.com', subject='My Favorite Subject 2', content='Email 2 Content', uid='2'),
-            Email(sender='foo@example.com', subject='My Favorite Subject 3', content='Email 3 Content', uid='3')
+            EmailOld(sender='foo@example.com', subject='My Favorite Subject 1', content='Email 1 Content', uid='1'),
+            EmailOld(sender='foo@example.com', subject='My Favorite Subject 2', content='Email 2 Content', uid='2'),
+            EmailOld(sender='foo@example.com', subject='My Favorite Subject 3', content='Email 3 Content', uid='3')
         ])
         # And that there is a user
         user = User(name='Foo Bar', email_address="test@example.com")
@@ -110,7 +110,7 @@ class TestEmailInbox(unittest.TestCase):
         mock_email_session_instance.connect_smtp.return_value = mock_server_module
 
         email_inbox = EmailInbox()
-        email = Email(sender="foo@example.com", subject="Test Email", content="This is a test email.")
+        email = EmailOld(sender="foo@example.com", subject="Test Email", content="This is a test email.")
         email_inbox.send_response(email, "This is a test response.")
         
         mock_server.sendmail.assert_called_with(EMAIL_ADDRESS, ["foo@example.com"], "123456789")

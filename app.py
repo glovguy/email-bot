@@ -7,7 +7,7 @@ from src.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
-from src.models import Email, User
+from src.models import EmailOld, User
 from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementService
 import src.views.skills
 import os

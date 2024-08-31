@@ -3,7 +3,7 @@ import datetime
 from typing import List
 from src.event_bus import register_event_listener
 from src.skills.zettelkasten_skill import Zettelkasten
-from src.models import Email
+from src.models import EmailOld
 from src.skills.base import SkillBase, email_chain_to_prompt_messages
 from src.skills.bot_brain import BotBrain
 
@@ -37,9 +37,9 @@ class GetToKnowYouSkill(SkillBase):
     @classmethod
     def ask_get_to_know_you_latest_emails(cls, user):
         since = datetime.datetime.now() - datetime.timedelta(hours=48)
-        latest_emails = Email.query.filter_by(sender_user=user).filter(Email.timestamp > since).all()
+        latest_emails = EmailOld.query.filter_by(sender_user=user).filter(EmailOld.timestamp > since).all()
         if len(latest_emails) == 0:
-            latest_emails = [Email.query.filter_by(sender_user=user).order_by(Email.timestamp).first()]
+            latest_emails = [EmailOld.query.filter_by(sender_user=user).order_by(EmailOld.timestamp).first()]
 
         latest_email_strings = [email.content for email in latest_emails]
         cls.ask_get_to_know_you(user, latest_email_strings)
@@ -297,7 +297,7 @@ def rerank_zettels(query: str, zettels: List[str]):
         "use_slow_model": False
     }
 
-def save_user_info_functions(email_chain: List[Email], existing_user_doc: str, zettels: List[str]):
+def save_user_info_functions(email_chain: List[EmailOld], existing_user_doc: str, zettels: List[str]):
     messages = [
         BASE_PROMPT, 
         {

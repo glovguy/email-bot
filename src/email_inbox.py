@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.utils import make_msgid
 import smtplib
 import uuid6
-from src.models import Email, db_session
+from src.models import EmailOld, db_session
 
 UNREAD = ['UNSEEN']
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -38,7 +38,7 @@ class EmailInbox:
     def create_email_entry(self, email_uid):
         try:
             raw_email = self.server.fetch(email_uid, ['BODY[]'])
-            return Email.from_raw_email(raw_email[email_uid], email_uid)
+            return EmailOld.from_raw_email(raw_email[email_uid], email_uid)
         except Exception as e:
             print("error creating email entry for uid: ", email_uid, " error: ", e)
             # If something goes wrong, mark the email as unread again
@@ -52,7 +52,7 @@ class EmailInbox:
         msg['Subject'] = subject
         message_id = make_msgid(str(uuid6.uuid7()), domain=EMAIL_DOMAIN) # f"<{}@{EMAIL_DOMAIN}>"
         msg['Message-ID'] = message_id
-        thread_path = Email.thread_path_from_parent(message_id, parent_email=parent_email)
+        thread_path = EmailOld.thread_path_from_parent(message_id, parent_email=parent_email)
         if parent_email:
             msg['In-Reply-To'] = parent_email.message_id
             msg['References'] = parent_email.thread_path.replace('/',',')
@@ -61,7 +61,7 @@ class EmailInbox:
             server.sendmail(msg['From'], [recipient], msg.as_string())
         
         print(f"Sent email to {recipient} with subject '{subject}'")
-        email_instance = Email(
+        email_instance = EmailOld(
             sender=msg['From'],
             recipients=[recipient],
             subject=recipient,
