@@ -12,7 +12,7 @@ import os
 from src.models import *
 from src.skills.email import check_mailbox
 import importlib
-
+from src.skills.zettel.zettel import Zettel
 
 def create_app():
     app = Flask(__name__)
