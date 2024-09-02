@@ -1,6 +1,7 @@
 from .oauth_credential import OAuthCredential
 from .gmail_client import GmailClient
 from .email import Email
+from .views import email_bp
 
 
 def check_mailbox():
@@ -16,5 +17,8 @@ def check_mailbox():
     #     print("Processing email: ", email)
     #     ProcessEmailSkill.process(email)
 
+def register_routes(app):
+    app.register_blueprint(email_bp)
 
-__all__ = ['Email', 'check_mailbox']
+
+__all__ = ['Email']

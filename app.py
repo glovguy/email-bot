@@ -1,8 +1,7 @@
 from decouple import config
-from flask import Flask, request, redirect, session
+from flask import Flask
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
-from src.skills.email.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
@@ -11,8 +10,8 @@ from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementServi
 import src.views.skills
 import os
 from src.models import *
-from src.skills.email.oauth_credential import OAuthCredential
 from src.skills.email import check_mailbox
+import importlib
 
 
 def create_app():
@@ -34,41 +33,7 @@ def create_app():
 [app, db] = create_app()
 
 
-@app.route('/')
-def home():
-    credential = OAuthCredential.query.filter_by(user_id=1).first()
-    if credential is None:
-        authorization_url, state = GmailClient.authorization_url()
-        session['state'] = state
-        return redirect(authorization_url)
-
-    return redirect("/emails")
-
-
-@app.route('/oauth2callback')
-def oauth2callback():
-    GmailClient.credentials_from_oauth_redirect(request.url, current_user().id)
-    print("Credentials successfully created")
-    return redirect('/emails')
-
-
-@app.route('/email')
-def emails_display():
-    credential = OAuthCredential.query.filter_by(user_id=1).first()
-    gmail_client = GmailClient(credential.to_credentials())
-    messages = gmail_client.messages()
-
-    email_info = []
-    for message in messages:
-        msg = gmail_client.get_message(message["id"])
-        email_data = msg['payload']['headers']
-        subject = next((header['value'] for header in email_data if header['name'] == 'Subject'), 'No Subject')
-        sender = next((header['value'] for header in email_data if header['name'] == 'From'), 'Unknown')
-        email_info.append(f"Subject: {subject}, From: {sender}")
-    
-    return "<br>".join(email_info)
-
-
+# TODO: remove
 app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 
@@ -103,6 +68,21 @@ app.config['JOBS'] = [
         'days': 1
     }
 ]
+
+def register_all_routes():
+    skills_dir = os.path.join(os.path.dirname(__file__), 'src', 'skills')
+    for skill in os.listdir(skills_dir):
+        skill_path = os.path.join(skills_dir, skill)
+        if os.path.isdir(skill_path):
+            try:
+                views_module = importlib.import_module(f'src.skills.{skill}')
+                if hasattr(views_module, 'register_routes'):
+                    views_module.register_routes(app)
+                    print(f"Registered routes for skill: {skill}")
+            except ImportError as e:
+                print(f"Could not import views for skill {skill}: {e}")
+
+register_all_routes()
 
 
 if __name__ == '__main__':
