@@ -2,7 +2,7 @@ from decouple import config
 from flask import Flask, request, redirect, session
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
-from src.gmail_client import GmailClient
+from src.skills.emails.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
@@ -11,6 +11,7 @@ from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementServi
 import src.views.skills
 import os
 from src.models import *
+from src.skills.emails.oauth_credential import OAuthCredential
 
 
 def create_app():
@@ -78,8 +79,7 @@ def check_mailbox():
     credential = OAuthCredential.query.filter_by(user_id=1).first()
     gmail_client = GmailClient(credential.to_credentials())
 
-    new_emails = gmail_client.fetch_emails()
-    print(len(new_emails), " new emails received")
+    gmail_client.fetch_emails()
 
     # unprocessed_emails = Email.query.filter_by(is_processed=False).all()
     # print(len(unprocessed_emails), " unprocessed emails.")

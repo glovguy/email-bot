@@ -1,7 +1,8 @@
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from src.models import Email, EmailOld, OAuthCredential
+from src.models import Email
+from src.skills.emails.oauth_credential import OAuthCredential
 
 
 flow = Flow.from_client_secrets_file(
@@ -64,7 +65,6 @@ class GmailClient():
 
     def fetch_emails_full_sync(self, update_existing_records=False):
         results = self.gmail_service.users().messages().list(userId='me').execute()
-        print(f"results keys: {results.keys()}")
         nextPageToken = results.get("nextPageToken")
         messages = results.get('messages', [])
 
@@ -73,11 +73,11 @@ class GmailClient():
         while (len(messages) > 0):
             print(f"page size of {len(messages)}")
             for msg_info in messages:
-                raw_email = self.get_message(msg_info['id'])
-
                 existing_email = Email.query.filter_by(gmail_id=msg_info["id"]).first()
                 if existing_email is not None and not update_existing_records:
                     continue
+
+                raw_email = self.get_message(msg_info['id'])
                 if existing_email is not None:
                     existing_email.update_from_raw_gmail(raw_email)
                     updated_emails.append(existing_email)
@@ -94,6 +94,7 @@ class GmailClient():
             messages = results.get('messages', [])
 
         print(f"Updated {len(updated_emails)} emails")
+        print(f"Created {len(new_emails)} new emails")
         return new_emails
 
     @classmethod
