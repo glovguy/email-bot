@@ -2,7 +2,7 @@ from decouple import config
 from flask import Flask, request, redirect, session
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
-from src.skills.emails.gmail_client import GmailClient
+from src.skills.email.gmail_client import GmailClient
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
@@ -11,7 +11,8 @@ from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementServi
 import src.views.skills
 import os
 from src.models import *
-from src.skills.emails.oauth_credential import OAuthCredential
+from src.skills.email.oauth_credential import OAuthCredential
+from src.skills.email import check_mailbox
 
 
 def create_app():
@@ -51,7 +52,7 @@ def oauth2callback():
     return redirect('/emails')
 
 
-@app.route('/emails')
+@app.route('/email')
 def emails_display():
     credential = OAuthCredential.query.filter_by(user_id=1).first()
     gmail_client = GmailClient(credential.to_credentials())
@@ -73,19 +74,6 @@ app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 def current_user():
     return User.query.filter_by(name=config('ME')).first()
-
-def check_mailbox():
-    print("checking mailbox...")
-    credential = OAuthCredential.query.filter_by(user_id=1).first()
-    gmail_client = GmailClient(credential.to_credentials())
-
-    gmail_client.fetch_emails()
-
-    # unprocessed_emails = Email.query.filter_by(is_processed=False).all()
-    # print(len(unprocessed_emails), " unprocessed emails.")
-    # for email in unprocessed_emails:
-    #     print("Processing email: ", email)
-    #     ProcessEmailSkill.process(email)
 
 def ask_get_to_know_you():
     # GetToKnowYouSkill.ask_get_to_know_you(me, initial_doc)

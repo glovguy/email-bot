@@ -1,8 +1,8 @@
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from src.models import Email
-from src.skills.emails.oauth_credential import OAuthCredential
+from .email import Email
+from .oauth_credential import OAuthCredential
 
 
 flow = Flow.from_client_secrets_file(
