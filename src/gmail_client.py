@@ -1,5 +1,6 @@
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from src.models import Email, EmailOld, OAuthCredential
 
 
@@ -22,39 +23,77 @@ class GmailClient():
         return self.gmail_service.users().messages().get(userId='me', id=email_id).execute()
 
     def fetch_emails(self):
-        return self.fetch_emails_full_sync()
+        return self.fetch_email_partial_sync()
 
     def fetch_email_partial_sync(self):
-        pass
-        # get history_id from most recent email
-        # use history.list to get more recent emails
-        # https://developers.google.com/gmail/api/guides/sync#partial_synchronization
+        latest_email = Email.query.order_by(Email.id.desc()).first()
+        history_id = latest_email.history_id
+        if history_id is None:
+            return self.fetch_emails_full_sync()
 
-    def fetch_emails_full_sync(self):
+        try:
+            # https://developers.google.com/gmail/api/guides/sync#partial_synchronization
+            results = self.gmail_service.users().history().list(userId="me", startHistoryId=latest_email.history_id).execute()
+            nextPageToken = results.get("nextPageToken", None)
+            messages = results.get('messages', [])
+
+            new_emails = []
+            updated_emails = []
+            while (len(messages) > 0):
+                print(f"page size of {len(messages)}")
+                for message in messages:
+                    raw_email = self.get_message(message['id'])
+
+                    existing_email = Email.query.filter_by(gmail_id=message["id"]).first()
+                    if existing_email is not None:
+                        existing_email.update_from_raw_gmail(raw_email)
+                        updated_emails.append(existing_email)
+                        continue
+
+                    email = Email.from_raw_gmail(raw_email)
+                    new_emails.append(email)
+                if nextPageToken is None:
+                    break
+
+                results = self.gmail_service.users().history().list(userId="me", startHistoryId=latest_email.history_id, pageToken=nextPageToken).execute()
+                nextPageToken = results.get("nextPageToken", None)
+                messages = results.get('messages', [])
+        except HttpError:
+            print("Unable to do partial sync. Running full sync")
+            self.fetch_emails_full_sync(update_existing_records=False)
+
+    def fetch_emails_full_sync(self, update_existing_records=False):
         results = self.gmail_service.users().messages().list(userId='me').execute()
         print(f"results keys: {results.keys()}")
         nextPageToken = results.get("nextPageToken")
         messages = results.get('messages', [])
 
         new_emails = []
-        existing_email_ids = set([eml.gmail_id for eml in Email.query.all()]) # TODO: add filtering for user
+        updated_emails = []
         while (len(messages) > 0):
             print(f"page size of {len(messages)}")
-            for message in messages:
-                if message['id'] in existing_email_ids:
+            for msg_info in messages:
+                raw_email = self.get_message(msg_info['id'])
+
+                existing_email = Email.query.filter_by(gmail_id=msg_info["id"]).first()
+                if existing_email is not None and not update_existing_records:
+                    continue
+                if existing_email is not None:
+                    existing_email.update_from_raw_gmail(raw_email)
+                    updated_emails.append(existing_email)
                     continue
 
-                raw_email = self.get_message(message['id'])
                 email = Email.from_raw_gmail(raw_email)
                 new_emails.append(email)
+
             if nextPageToken is None:
                 break
 
             results = self.gmail_service.users().messages().list(userId='me', pageToken=nextPageToken).execute()
-            print(f"results keys: {results.keys()}")
             nextPageToken = results.get("nextPageToken", None)
             messages = results.get('messages', [])
 
+        print(f"Updated {len(updated_emails)} emails")
         return new_emails
 
     @classmethod

@@ -8,7 +8,7 @@ from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker, object_session
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -64,6 +64,24 @@ class Email(db.Model):
         )
         db_session.add(email_instance)
         db_session.commit()
+
+    def update_from_raw_gmail(self, raw_email):
+        # manage instance session
+        session = object_session(self) or db_session
+        instance = session.merge(self)
+
+        payload = raw_email["payload"]
+        headers = payload["headers"]
+
+        instance.thread_id=raw_email["threadId"]
+        instance.snippet=raw_email["snippet"]
+        instance.from_email_address=next((p["value"] for p in headers if p["name"] == "From"))
+        instance.to_email_address=next((p["value"] for p in headers if p["name"] == "To"))
+        instance.subject=next((p["value"] for p in headers if p["name"] == "Subject"))
+        instance.history_id=raw_email["historyId"]
+
+        session.add(self)
+        session.commit()
 
 
 class EmailOld(db.Model):
