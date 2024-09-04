@@ -1,7 +1,6 @@
 from sqlalchemy import Boolean, Column, Integer, String
 from src.models import db, db_session, object_session
-# from src.skills.email.oauth_credential import OAuthCredential
-# from src.skills.email.gmail_client import GmailClient
+
 
 class Email(db.Model):
     __tablename__ = 'emails'

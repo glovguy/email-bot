@@ -18,28 +18,13 @@ logger = logging.getLogger('alembic.env')
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# def get_engine():
-#     try:
-#         # this works with Flask-SQLAlchemy<3 and Alchemical
-#         return current_app.extensions['migrate'].db.get_engine()
-#     except (TypeError, AttributeError):
-#         # this works with Flask-SQLAlchemy>=3
-#         return current_app.extensions['migrate'].db.engine
+from src.models import *
 
 def get_engine(bind=None):
     """Retrieve the correct engine based on the bind key."""
     if bind:
         return current_app.extensions['migrate'].db.get_engine(bind=bind)
     return current_app.extensions['migrate'].db.engine
-
-# def get_engine_url():
-#     try:
-#         return get_engine().url.render_as_string(hide_password=False).replace(
-#             '%', '%%')
-#     except AttributeError:
-#         return str(get_engine().url).replace('%', '%%')
-
 
 # add your model's MetaData object here
 # for 'autogenerate' support

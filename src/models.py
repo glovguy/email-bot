@@ -1,15 +1,14 @@
-# from datetime import datetime
-# import json
 from decouple import config
 from email.utils import getaddresses
 from flask_sqlalchemy import SQLAlchemy
-# from google.oauth2.credentials import Credentials
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import ARRAY, FLOAT
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, object_session
+from sqlalchemy.sql import text
+from sqlalchemy.types import UserDefinedType
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -36,11 +35,33 @@ Base.query = db_session.query_property()
 
 db = SQLAlchemy()
 
+class Vector(UserDefinedType):
+    def __init__(self, dim):
+        self.dim = dim
 
-class VectorType(ARRAY):
-    def __init__(self, dimensions):
-        super().__init__(FLOAT, dimensions=dimensions)
+    def get_col_spec(self):
+        return f"VECTOR({self.dim})"
 
+    def bind_expression(self, bindvalue):
+        return func.vec(bindvalue, type_=self)
+
+    def bind_processor(self, _dialect):
+        def process(value):
+            if value is None:
+                return None
+            return f"[{','.join(map(str, value))}]"
+        return process
+
+    def result_processor(self, _dialect, _coltype):
+        def process(value):
+            if value is None:
+                return None
+            return [float(x) for x in value.strip('[]').split(',')]
+        return process
+
+def create_vector_extension():
+    db_session.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+    db_session.commit()
 
 class EmailOld(db.Model):
     __tablename__ = 'emails_old'
@@ -157,3 +178,4 @@ class User(db.Model):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    create_vector_extension()
