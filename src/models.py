@@ -2,11 +2,11 @@ from decouple import config
 from email.utils import getaddresses
 from flask_sqlalchemy import SQLAlchemy
 from pyzmail import PyzMessage
-from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, ForeignKey, func
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker, object_session
-from sqlalchemy.sql import text
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
 
 
@@ -39,23 +39,25 @@ class Vector(UserDefinedType):
         self.dim = dim
 
     def get_col_spec(self):
-        return f"VECTOR({self.dim})"
+        return f"vector({self.dim})"
 
     def bind_expression(self, bindvalue):
-        return func.vec(bindvalue, type_=self)
+        return expression.cast(bindvalue, self)
 
     def bind_processor(self, _dialect):
         def process(value):
             if value is None:
                 return None
-            return f"[{','.join(map(str, value))}]"
+            if isinstance(value, list):
+                return value
+            raise ValueError("Vector values must be lists")
         return process
 
     def result_processor(self, _dialect, _coltype):
         def process(value):
             if value is None:
                 return None
-            return [float(x) for x in value.strip('[]').split(',')]
+            return list(value)
         return process
 
 def create_vector_extension():
@@ -160,9 +162,8 @@ class User(db.Model):
     id = Column(Integer, primary_key=True)
     email_address = Column(String, unique=True, nullable=False)
     name = Column(String(255), nullable=False)
-    # emails = relationship("Email", order_by=Email.id, back_populates="sender_user")
-    # emails_old = relationship("EmailOld", order_by=EmailOld.id, back_populates="sender_user_old")
     oauth_credential = relationship("OAuthCredential", back_populates="user")
+    zettels = relationship("Zettel", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
