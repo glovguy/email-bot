@@ -3,7 +3,6 @@ from email.utils import getaddresses
 from flask_sqlalchemy import SQLAlchemy
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, ForeignKey, func
-from sqlalchemy.dialects.postgresql import ARRAY, FLOAT
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, object_session

@@ -17,7 +17,7 @@ def instructor_note_embed(doc_string):
     return vec
 
 class Zettel(db.Model):
-    __tablename__ = "zettel"
+    __tablename__ = "zettels"
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False)

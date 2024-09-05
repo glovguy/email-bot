@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 
 
 class OAuthCredential(db.Model):
-    __tablename__ = "oauth_credential"
+    __tablename__ = "oauth_credentials"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
