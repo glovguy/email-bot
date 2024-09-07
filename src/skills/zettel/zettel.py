@@ -6,6 +6,7 @@ from src.models import db, Vector
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func, Index, event
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql.expression import cast
 
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
@@ -43,10 +44,12 @@ class Zettel(db.Model):
 
     @classmethod
     def find_similar(cls, doc_string, limit=5):
+        """Returns list containing elements of [Zettel, float sim score]"""
         comparison_embedding = instructor_note_embed(doc_string)
-        return cls.query.order_by(
-            func.cosine_similarity(cls.instructor_embedding, comparison_embedding).desc()
-        ).limit(limit).all()
+        vector_cast = func.vector(cast(comparison_embedding, cls.instructor_base_embedding.type))
+        similarity_scores = func.cosine_similarity(cls.instructor_base_embedding, vector_cast)
+        query = cls.query.with_entities(cls, similarity_scores).order_by(similarity_scores.desc()).limit(limit).all()
+        return [(item[0], item[1]) for item in query]
 
 
 def on_change_content(target, value, _oldvalue, _initiator):

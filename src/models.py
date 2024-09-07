@@ -76,6 +76,12 @@ class Vector(UserDefinedType):
 
 def create_vector_extension():
     db_session.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+    db_session.execute(text("""
+    CREATE OR REPLACE FUNCTION cosine_similarity(a vector, b vector)
+    RETURNS float AS $$
+    SELECT 1 - (a <=> b);
+    $$ LANGUAGE SQL IMMUTABLE STRICT;
+    """))
     db_session.commit()
 
 class EmailOld(db.Model):
