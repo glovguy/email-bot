@@ -6,7 +6,8 @@ from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
-from src.skills.zettelkasten_skill import LOCAL_DOCS_FOLDER, FileManagementService
+from src.skills.zettel.file_management_service import FileManagementService
+from src.skills.zettel.zettel import LOCAL_DOCS_FOLDER
 import src.views.skills
 import os
 from src.models import *
@@ -87,7 +88,6 @@ register_all_routes()
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
-    # FileManagementService.sync_documents_from_folder(LOCAL_DOCS_FOLDER)
     # ponder_wittgenstein()
     # ask_get_to_know_you()
     # scheduler = APScheduler()
@@ -95,5 +95,6 @@ if __name__ == '__main__':
     # scheduler.start()
     init_db()
     with app.app_context():
-        check_mailbox()
+        # check_mailbox()
+        FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
         app.run(port=5000, debug=True, use_reloader=True)

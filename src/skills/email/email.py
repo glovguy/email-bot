@@ -1,5 +1,6 @@
 from sqlalchemy import Boolean, Column, Integer, String
-from src.models import db, db_session, object_session
+from sqlalchemy.orm import object_session
+from src.models import db, db_session
 
 
 class Email(db.Model):

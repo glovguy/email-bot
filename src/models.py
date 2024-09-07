@@ -1,6 +1,5 @@
 from decouple import config
 from email.utils import getaddresses
-from flask_sqlalchemy import SQLAlchemy
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.engine.url import URL
@@ -8,6 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
+from contextlib import contextmanager
+from flask_sqlalchemy import SQLAlchemy
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -27,7 +28,20 @@ POSTGRES_DATABASE_URL = URL.create(
 SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
 
 engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+db_session = scoped_session(sessionmaker(autoflush=False, bind=engine))
+
+@contextmanager
+def session_scope():
+    session = db_session()
+    try:
+        yield session
+        session.commit()
+    except:
+        print("ERR CAUSING DB ROLLBACK")
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 Base = declarative_base()
 Base.query = db_session.query_property()

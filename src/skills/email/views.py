@@ -26,6 +26,7 @@ def emails_display():
         sender = msg.from_email_address
         email_info.append(f"Subject: {subject}, From: {sender}<br>{msg.snippet}")
     
+    top_nav = "<h1>Email</h1><br><hr>"
     return "<div>" + "</div><hr><div>".join(email_info) + "</div>"
 
 
