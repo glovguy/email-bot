@@ -1,12 +1,12 @@
 from decouple import config
 import hashlib
-import uuid
-from src.skills.base import default_embeddings_model
-from src.models import db, Vector
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func, Index, event
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql.expression import cast
+import uuid
+from src.skills.base import default_embeddings_model
+from src.models import db, Vector
 
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')

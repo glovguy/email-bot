@@ -1,4 +1,5 @@
 from decouple import config
+import re
 from email.utils import getaddresses
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
@@ -71,7 +72,8 @@ class Vector(UserDefinedType):
         def process(value):
             if value is None:
                 return None
-            return list(value)
+            value = value.strip('[]')
+            return [float(x) for x in re.split(r',\s*(?=(?:[^"]*"[^"]*")*[^"]*$)', value)]
         return process
 
 def create_vector_extension():
