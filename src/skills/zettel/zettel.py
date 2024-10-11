@@ -1,3 +1,4 @@
+from typing import List
 from decouple import config
 import hashlib
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func, Index, event
@@ -7,6 +8,7 @@ from sqlalchemy.sql.expression import cast
 import uuid
 from src.skills.base import default_embeddings_model
 from src.models import db, Vector
+from .zettel_topic_association import ZettelTopicAssociation
 
 
 LOCAL_DOCS_FOLDER = config('LOCAL_DOCS_FOLDER')
@@ -30,6 +32,7 @@ class Zettel(db.Model):
     title = Column(String(255), nullable=False)
     filepath = Column(String(255), nullable=False, unique=True)
     instructor_base_embedding = Column(Vector(768))
+    topics = relationship("ZettelkastenTopic", secondary="zettel_topic_association", back_populates="zettels")
 
     __table_args__ = (
         Index('ix_zettel_embedding', 'instructor_base_embedding', postgresql_using='ivfflat'),
@@ -46,10 +49,19 @@ class Zettel(db.Model):
     def find_similar(cls, doc_string, limit=5):
         """Returns list containing elements of [Zettel, float sim score]"""
         comparison_embedding = instructor_note_embed(doc_string)
+        return cls.vector_search(comparison_embedding, limit)
+
+    @classmethod
+    def vector_search(cls, comparison_embedding: List[List[float]], limit=5):
+        """Returns list containing elements of [Zettel, float sim score]"""
         vector_cast = func.vector(cast(comparison_embedding, cls.instructor_base_embedding.type))
         similarity_scores = func.cosine_similarity(cls.instructor_base_embedding, vector_cast)
         query = cls.query.with_entities(cls, similarity_scores).order_by(similarity_scores.desc()).limit(limit).all()
         return [(item[0], item[1]) for item in query]
+
+    def similarity_score_for_topic(self, topic_id: int):
+        association = ZettelTopicAssociation.query.filter_by(topic_id=topic_id, zettel_id=self.id).first()
+        return association.similarity_score if association else None
 
 
 def on_change_content(target, value, _oldvalue, _initiator):

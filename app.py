@@ -13,7 +13,7 @@ import os
 from src.models import *
 from src.skills.email import check_mailbox
 import importlib
-from src.skills.zettel.zettel import Zettel
+
 
 def create_app():
     app = Flask(__name__)
@@ -96,5 +96,9 @@ if __name__ == '__main__':
     init_db()
     with app.app_context():
         # check_mailbox()
-        FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
+        # FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
+        topic = current_user().topics[0]
+        zettels = topic.zettels_by_similarity()[:10]
+        db_session.add_all(zettels)
+        print([z.title for z in zettels])
         app.run(port=5000, debug=True, use_reloader=True)

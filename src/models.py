@@ -1,5 +1,6 @@
 from decouple import config
 import re
+import numpy as np
 from email.utils import getaddresses
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
@@ -29,20 +30,7 @@ POSTGRES_DATABASE_URL = URL.create(
 SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
 
 engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
-db_session = scoped_session(sessionmaker(autoflush=False, bind=engine))
-
-@contextmanager
-def session_scope():
-    session = db_session()
-    try:
-        yield session
-        session.commit()
-    except:
-        print("ERR CAUSING DB ROLLBACK")
-        session.rollback()
-        raise
-    finally:
-        session.close()
+db_session = scoped_session(sessionmaker(autoflush=True, bind=engine))
 
 Base = declarative_base()
 Base.query = db_session.query_property()
@@ -75,6 +63,21 @@ class Vector(UserDefinedType):
             value = value.strip('[]')
             return [float(x) for x in re.split(r',\s*(?=(?:[^"]*"[^"]*")*[^"]*$)', value)]
         return process
+
+
+def cosine_similarity(a, b):
+    if not isinstance(a, np.ndarray):
+        a = np.array(a)
+    if not isinstance(b, np.ndarray):
+        b = np.array(b)
+
+    dot_product = np.dot(a, b)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+
+    similarity = dot_product / (norm_a * norm_b)
+    return similarity
+
 
 def create_vector_extension():
     db_session.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
@@ -154,7 +157,7 @@ class EmailOld(db.Model):
         db_session.commit()
         
         return email_instance
-    
+
     @classmethod
     def thread_path_from_parent(cls, current_message_id, parent_email=None, in_reply_to=None):
         print("current_message_id: ", current_message_id)
@@ -162,17 +165,17 @@ class EmailOld(db.Model):
         print("in_reply_to: ", in_reply_to, type(in_reply_to))
         if parent_email is None and in_reply_to == '':
             return f"/{current_message_id}"
-        
+
         if in_reply_to != '':
             parent_email = EmailOld.query.filter_by(message_id=in_reply_to).first()
         if parent_email is not None:
             print("Found parent email: ", parent_email)
             return f"{parent_email.thread_path}/{current_message_id}"
         return f"/{in_reply_to}/{current_message_id}"
-    
+
     def recipient_is_chat_address(self):
         return EMAIL_ADDRESS in self.recipients
-    
+
     def email_chain(self):
         msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']
         return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
@@ -186,6 +189,7 @@ class User(db.Model):
     name = Column(String(255), nullable=False)
     oauth_credential = relationship("OAuthCredential", back_populates="user")
     zettels = relationship("Zettel", back_populates="user")
+    topics = relationship("ZettelkastenTopic", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):
