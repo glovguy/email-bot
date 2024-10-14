@@ -64,6 +64,12 @@ app.config['JOBS'] = [
         'trigger': 'interval',
         'minutes': 29
     },
+    {
+        'id': 'sync_local_docs',
+        'func': 'app:sync_local_docs',
+        'trigger': 'interval',
+        'days': 1
+    },
     # {
     #     'id': 'ponder_wittgenstein',
     #     'func': 'app:ponder_wittgenstein',
@@ -101,6 +107,12 @@ if __name__ == '__main__':
     scheduler = APScheduler()
     scheduler.init_app(app)
     scheduler.start()
+
+    # Function to shut down the scheduler
+    @app.teardown_appcontext
+    def shutdown_scheduler(exception=None):
+        scheduler.shutdown()
+
     # init_db()
     with app.app_context():
         check_mailbox()
