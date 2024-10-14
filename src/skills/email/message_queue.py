@@ -87,13 +87,30 @@ class MessageQueue(db.Model):
 
         total_weighted_time = 0
         for message in sent_messages:
-            hours_since_sent = (now - message.sent_at).total_seconds() / 3600
-            decay_factor = math.exp(-hours_since_sent / 12)  # Half-life of 12 hours
-            total_weighted_time += message.estimated_time * decay_factor
+            weighted_time = self._calculate_weighted_time(message, now)
+            total_weighted_time += weighted_time
 
         remaining_bandwidth = self.user_attention_bandwidth_minutes - total_weighted_time
 
         return max(0, remaining_bandwidth)
+
+    def _calculate_weighted_time(self, message, now):
+        hours_since_sent = (now - message.sent_at).total_seconds() / 3600
+        decay_factor = math.exp(-hours_since_sent / 6)  # Half-life of 6 hours
+
+        # Calculate the number of waking hours since the message was sent
+        waking_hours = self._count_waking_hours(message.sent_at, now)
+
+        return message.estimated_time * decay_factor * (waking_hours / hours_since_sent)
+
+    def _count_waking_hours(self, start, end):
+        waking_hours = 0
+        current = start
+        while current <= end:
+            if current.hour >= 10 and current.hour < 20:
+                waking_hours += 1
+            current += timedelta(hours=1)
+        return waking_hours
 
     def send_enqueued_message(self, enqueued_message):
         gmail_response = GmailClient(user_id=self.user_id).send_message(enqueued_message)
