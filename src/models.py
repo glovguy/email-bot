@@ -100,7 +100,7 @@ class User(db.Model):
     zettels = relationship("Zettel", back_populates="user")
     topics = relationship("ZettelkastenTopic", back_populates="user")
     message_queues = relationship("MessageQueue", back_populates="user")
-    # emails = relationship("Email", back_populates="user")
+    emails = relationship("Email", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
 
     def __repr__(self):

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from src.models import db, db_session
 
@@ -11,8 +11,8 @@ class Email(db.Model):
     __tablename__ = 'emails'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
-    # user = relationship("User", back_populates="emails")
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user = relationship("User", back_populates="emails")
     gmail_id = Column(String, nullable=False, unique=True)
     thread_id = Column(String, nullable=True)
     snippet = Column(String, nullable=True)
