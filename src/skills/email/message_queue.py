@@ -76,7 +76,12 @@ class MessageQueue(db.Model):
         return message
 
     def user_remaining_attention_bandwidth(self):
+        hour_awake = self.user.hour_awake or 9
+        hour_bedtime = self.user.hour_bedtime or 17
         now = datetime.now()
+        if now.hour < hour_awake or now.hour >= hour_bedtime:
+            return 0
+
         thirty_six_hours_ago = now - timedelta(hours=36)
 
         sent_messages = EnqueuedMessage.query.filter(
@@ -87,27 +92,27 @@ class MessageQueue(db.Model):
 
         total_weighted_time = 0
         for message in sent_messages:
-            weighted_time = self._calculate_weighted_time(message, now)
+            weighted_time = self._calculate_weighted_time(message, now, hour_awake, hour_bedtime)
             total_weighted_time += weighted_time
 
         remaining_bandwidth = self.user_attention_bandwidth_minutes - total_weighted_time
 
         return max(0, remaining_bandwidth)
 
-    def _calculate_weighted_time(self, message, now):
+    def _calculate_weighted_time(self, message, now, hour_awake, hour_bedtime):
         hours_since_sent = (now - message.sent_at).total_seconds() / 3600
         decay_factor = math.exp(-hours_since_sent / 6)  # Half-life of 6 hours
 
         # Calculate the number of waking hours since the message was sent
-        waking_hours = self._count_waking_hours(message.sent_at, now)
+        waking_hours = self._count_waking_hours(message.sent_at, now, hour_awake, hour_bedtime)
 
         return message.estimated_time * decay_factor * (waking_hours / hours_since_sent)
 
-    def _count_waking_hours(self, start, end):
+    def _count_waking_hours(self, start, end, hour_awake, hour_bedtime):
         waking_hours = 0
         current = start
         while current <= end:
-            if current.hour >= 10 and current.hour < 20:
+            if current.hour >= hour_awake and current.hour < hour_bedtime:
                 waking_hours += 1
             current += timedelta(hours=1)
         return waking_hours

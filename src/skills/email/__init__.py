@@ -18,8 +18,9 @@ def full_sync(user_id):
     gmail_client = GmailClient(user_id=user_id)
     gmail_client.fetch_emails_full_sync(update_existing_records=True)
 
-def send_next_message_if_bandwidth_available(user):
-    message_queues = MessageQueue.query.filter_by(user_id=user.id).all()
+def send_next_message_if_bandwidth_available():
+    user_id = 1
+    message_queues = MessageQueue.query.filter_by(user_id=user_id).all()
     for message_queue in message_queues:
         message_queue.send_next_message_if_bandwidth_available()
 

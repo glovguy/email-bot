@@ -102,6 +102,8 @@ class User(db.Model):
     message_queues = relationship("MessageQueue", back_populates="user")
     emails = relationship("Email", back_populates="user")
     signatures_csv = Column(String) # comma separated list of exact string signatures used
+    hour_awake = Column(Integer)
+    hour_bedtime = Column(Integer)
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"

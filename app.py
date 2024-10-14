@@ -47,26 +47,35 @@ def ask_get_to_know_you():
 def ponder_wittgenstein():
     PonderWittgensteinSkill.ponder_wittgenstein(current_user())
 
+def sync_local_docs():
+    FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
+
 
 app.config['JOBS'] = [
     {
-        'id': 'check_and_process_unread_emails',
+        'id': 'check_mailbox',
         'func': 'app:check_mailbox',
         'trigger': 'interval',
-        'hours': 1
+        'minutes': 17
     },
     {
-        'id': 'ponder_wittgenstein',
-        'func': 'app:ponder_wittgenstein',
+        'id': 'send_next_message_if_bandwidth_available',
+        'func': 'app:send_next_message_if_bandwidth_available',
         'trigger': 'interval',
-        'days': 2
+        'minutes': 29
     },
-    {
-        'id': 'ask_get_to_know_you',
-        'func': 'app:ask_get_to_know_you',
-        'trigger': 'interval',
-        'days': 1
-    }
+    # {
+    #     'id': 'ponder_wittgenstein',
+    #     'func': 'app:ponder_wittgenstein',
+    #     'trigger': 'interval',
+    #     'days': 2
+    # },
+    # {
+    #     'id': 'ask_get_to_know_you',
+    #     'func': 'app:ask_get_to_know_you',
+    #     'trigger': 'interval',
+    #     'days': 1
+    # }
 ]
 
 def register_all_routes():
@@ -89,12 +98,12 @@ if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
     # ponder_wittgenstein()
     # ask_get_to_know_you()
-    # scheduler = APScheduler()
-    # scheduler.init_app(app)
-    # scheduler.start()
-    init_db()
+    scheduler = APScheduler()
+    scheduler.init_app(app)
+    scheduler.start()
+    # init_db()
     with app.app_context():
         check_mailbox()
-        send_next_message_if_bandwidth_available(current_user())
-        FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
+        send_next_message_if_bandwidth_available()
+        sync_local_docs()
         app.run(port=5000, debug=True, use_reloader=True)
