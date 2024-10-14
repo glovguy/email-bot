@@ -3,7 +3,6 @@ from flask import Flask
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
-from src.skills.process_email_skill import ProcessEmailSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
 from src.skills.zettel.file_management_service import FileManagementService
@@ -11,7 +10,7 @@ from src.skills.zettel.zettel import LOCAL_DOCS_FOLDER
 import src.views.skills
 import os
 from src.models import *
-from src.skills.email import check_mailbox
+from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
 import importlib
 
 
@@ -95,10 +94,7 @@ if __name__ == '__main__':
     # scheduler.start()
     init_db()
     with app.app_context():
-        # check_mailbox()
-        # FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
-        topic = current_user().topics[0]
-        zettels = topic.zettels_by_similarity()[:10]
-        db_session.add_all(zettels)
-        print([z.title for z in zettels])
+        check_mailbox()
+        send_next_message_if_bandwidth_available(current_user())
+        FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
         app.run(port=5000, debug=True, use_reloader=True)

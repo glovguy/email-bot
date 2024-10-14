@@ -79,7 +79,6 @@ class ZettelkastenTopic(db.Model):
             max_tokens=70,
             system="The following are notes that fit in a Zettelkasten topic group. They are written in markdown. Please generate a title for the topic. Only include the title text in your response. Do not use markdown."
         ).content[0].text
-        print("\n\n".join([summary, name]))
         return [summary, name]
 
     @classmethod

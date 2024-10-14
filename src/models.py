@@ -9,7 +9,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
-from contextlib import contextmanager
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -29,6 +28,7 @@ POSTGRES_DATABASE_URL = URL.create(
 )
 SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
 
+# singleton db session, no multithreading
 engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
 db_session = scoped_session(sessionmaker(autoflush=True, bind=engine))
 
@@ -89,6 +89,36 @@ def create_vector_extension():
     """))
     db_session.commit()
 
+
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, unique=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    oauth_credential = relationship("OAuthCredential", back_populates="user")
+    zettels = relationship("Zettel", back_populates="user")
+    topics = relationship("ZettelkastenTopic", back_populates="user")
+    message_queues = relationship("MessageQueue", back_populates="user")
+    # emails = relationship("Email", back_populates="user")
+    signatures_csv = Column(String) # comma separated list of exact string signatures used
+
+    def __repr__(self):
+        return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
+
+    @property
+    def signatures(self):
+        if self.signatures_csv:
+            return self.signatures_csv.split(',')
+        return []
+
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
+    create_vector_extension()
+
+
+# deprecated
 class EmailOld(db.Model):
     __tablename__ = 'emails_old'
 
@@ -179,29 +209,3 @@ class EmailOld(db.Model):
     def email_chain(self):
         msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']
         return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
-
-
-class User(db.Model):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True)
-    email_address = Column(String, unique=True, nullable=False)
-    name = Column(String(255), nullable=False)
-    oauth_credential = relationship("OAuthCredential", back_populates="user")
-    zettels = relationship("Zettel", back_populates="user")
-    topics = relationship("ZettelkastenTopic", back_populates="user")
-    signatures_csv = Column(String) # comma separated list of exact string signatures used
-
-    def __repr__(self):
-        return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
-    
-    @property
-    def signatures(self):
-        if self.signatures_csv:
-            return self.signatures_csv.split(',')
-        return []
-
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
-    create_vector_extension()
