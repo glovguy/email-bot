@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 import base64
 from email_reply_parser import EmailReplyParser
 from decouple import config
+from email.mime.multipart import MIMEMultipart
 
 
 flow = Flow.from_client_secrets_file(
@@ -166,13 +167,21 @@ class GmailClient():
         return new_emails
 
     def send_message(self, enqueued_message: EnqueuedMessage) -> Dict[str, str]:
-        message = MIMEText(enqueued_message.content)
+        message = MIMEMultipart()
         message['to'] = enqueued_message.recipient_email
         message['subject'] = enqueued_message.subject
+
+        # Convert content to HTML to preserve formatting
+        html_content = f"<span style='white-space: pre-wrap; word-wrap: break-word;'>{enqueued_message.content}</span>"
+        message.attach(MIMEText(html_content, 'html'))
+
         if enqueued_message.parent_message_id:
             message['In-Reply-To'] = enqueued_message.parent_message_id
             message['References'] = enqueued_message.parent_message_id
+
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+
         return self.gmail_service.users().messages().send(userId='me', body={"raw": raw_message}).execute()
 
     @classmethod
