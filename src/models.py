@@ -104,6 +104,7 @@ class User(db.Model):
     signatures_csv = Column(String) # comma separated list of exact string signatures used
     hour_awake = Column(Integer, default=9) # when we would expect the user to read and respond to emails
     hour_bedtime = Column(Integer, default=17)
+    open_questions = relationship("OpenQuestion", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"

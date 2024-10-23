@@ -10,8 +10,7 @@ def check_mailbox():
     print("checking mailbox...")
     user_id = 1
     gmail_client = GmailClient(user_id=user_id)
-
-    gmail_client.fetch_emails_partial_sync()
+    gmail_client.fetch_emails_full_sync()
     EmailEventBus.process_unhandled_emails()
 
 def full_sync(user_id):

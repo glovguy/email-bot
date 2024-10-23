@@ -15,6 +15,7 @@ class EnqueuedMessage(db.Model):
     queue = relationship('MessageQueue', back_populates='enqueued_messages')
     created_at = Column(DateTime, default=func.now())
     email_thread_id = Column(String(255), nullable=True)
+    parent_message_id = Column(String(255), nullable=True)
     recipient_email = Column(String(255), nullable=False)
     subject = Column(String(255), nullable=False)
     sent_at = Column(DateTime, nullable=True)

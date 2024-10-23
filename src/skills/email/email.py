@@ -22,6 +22,7 @@ class Email(db.Model):
     is_processed = Column(Boolean, default=False, nullable=False)
     history_id = Column(String, nullable=True) # used for partial sync
     received_at = Column(DateTime, nullable=False)
+    message_id = Column(String, nullable=True)
 
     @classmethod
     def from_raw_gmail(cls, raw_email, user_id):
@@ -36,7 +37,8 @@ class Email(db.Model):
             to_email_address=next((p["value"] for p in headers if p["name"].lower() == "to")),
             subject=next((p["value"] for p in headers if p["name"].lower() == "subject")),
             history_id=raw_email["historyId"],
-            received_at=cls.internal_date_to_received_at(raw_email["internalDate"])
+            received_at=cls.internal_date_to_received_at(raw_email["internalDate"]),
+            message_id=next((p["value"] for p in headers if p["name"].lower() == "message-id")),
         )
         db_session.add(email_instance)
         db_session.commit()
@@ -56,6 +58,7 @@ class Email(db.Model):
         instance.subject=next((p["value"] for p in headers if p["name"].lower() == "subject"))
         instance.history_id=raw_email["historyId"]
         instance.received_at=self.internal_date_to_received_at(raw_email["internalDate"])
+        instance.message_id=next((p["value"] for p in headers if p["name"].lower() == "message-id"))
 
         db_session.add(instance)
         db_session.commit()

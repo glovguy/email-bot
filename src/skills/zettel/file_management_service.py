@@ -23,7 +23,7 @@ class FileManagementService:
         self.print_sync_info()
 
     def add_documents_from_folder(self, folderPath, user):
-        allDocs = Zettel.query.filter_by(user_id=user.id).all()
+        allDocs = db_session.query(Zettel).filter_by(user_id=user.id).all()
         print(f"{len(allDocs)} synced docs in db")
         items = os.listdir(folderPath)
         self.itemCount = len(items)
@@ -44,8 +44,8 @@ class FileManagementService:
                 fileContentSha = Zettel.doc_sha(filtered_data)
                 self.allShasInFiles.add(fileContentSha)
                 title = item.removesuffix('.md')
-                existingZettel = Zettel.query.filter_by(sha=fileContentSha).all()
-                if len(existingZettel) == 0:
+                existingZettels = db_session.query(Zettel).filter_by(sha=fileContentSha).all()
+                if len(existingZettels) == 0:
                     # create
                     newZettel = Zettel(
                         content=filtered_data,
@@ -56,16 +56,16 @@ class FileManagementService:
                     self.numDocsMade += 1
                     db_session.add(newZettel)
                     continue
-                if len(existingZettel) > 1:
-                    print('found multiple docs, deleting duplicates: ', [z.id for z in existingZettel[1:]])
-                    duplicates = existingZettel[1:]
+                if len(existingZettels) > 1:
+                    print('found multiple docs, deleting duplicates: ', [z.id for z in existingZettels[1:]])
+                    duplicates = existingZettels[1:]
                     for dup in duplicates:
                         db_session.delete(dup)
                     self.numFilesDeleted += len(duplicates)
-                if len(existingZettel) > 0:
+                if len(existingZettels) > 0:
                     # repair
                     upsert_needed = False
-                    ztl = existingZettel[0]
+                    ztl = existingZettels[0]
                     if ztl.content != filtered_data:
                         ztl.content = filtered_data
                         db_session.add(ztl)
@@ -79,7 +79,7 @@ class FileManagementService:
                         ztl.filepath = item_path
                         db_session.add(ztl)
                     if upsert_needed:
-                        print("Repairing: ", existingZettel.get('ids'))
+                        print("Repairing: ", [ztl.id for ztl in existingZettels])
                         self.numFilesMetadataUpdated += 1
                     else:
                         self.numExistingFilesSkipped += 1
@@ -101,7 +101,7 @@ class FileManagementService:
         print(f"Updated metadata to {self.numFilesMetadataUpdated} files")
         print(f"Deleted {self.numFilesDeleted} files with duplicate shas")
         print(f"Deleted {self.zettelsWithoutFileDeleted} docs without a corresponding file")
-        numDocs = Zettel.query.count()
+        numDocs = db_session.query(Zettel).count()
         print(f"Now {numDocs} synced docs in db")
 
     @classmethod

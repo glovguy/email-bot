@@ -2,6 +2,9 @@ from src.models import db, db_session
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from .email import Email
+import traceback
+import sys
+import logging
 
 
 class EmailCommandListener(db.Model):
@@ -32,7 +35,8 @@ class EmailEventBus:
         db_session.commit()
 
     @classmethod
-    def dispatch_email(cls, email):
+    def dispatch_email(cls, email: Email):
+        print(f"Dispatching email with thread_id: {email.thread_id}")
         listener = db_session.query(EmailCommandListener).filter_by(gmail_thread_id=email.thread_id).first()
         if listener:
             try:
@@ -45,7 +49,12 @@ class EmailEventBus:
                 email.is_processed = True
                 db_session.commit()
             except Exception as e:
-                print(f"Error dispatching email: {str(e)}")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logging.error("Error dispatching email:")
+                logging.error(f"Exception type: {exc_type.__name__}")
+                logging.error(f"Exception message: {str(e)}")
+                logging.error("Traceback:")
+                logging.error(traceback.format_exc())
         else:
             print(f"No listener found for email thread {email.thread_id}")
             email.is_processed = True

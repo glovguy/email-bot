@@ -35,19 +35,19 @@ class MessageQueue(db.Model):
         return message_queue
 
     def send_next_message_if_bandwidth_available(self):
-        remaining_bandwidth = self.user_remaining_attention_bandwidth()
+        remaining_bandwidth = 20 #self.user_remaining_attention_bandwidth()
         print(f"Remaining bandwidth: {remaining_bandwidth}")
-        next_message = self.get_next_message(remaining_bandwidth)
+        next_message = self.get_next_message(estimated_time_threshold=remaining_bandwidth)
         if next_message:
             self.send_enqueued_message(next_message)
 
-    def enqueue_message(self, content, recipient_email, email_thread_id=None, subject=None, estimated_time=None, response_listener=None):
-        if email_thread_id is None and subject is None:
-            raise ValueError("email_thread_id or subject must be provided")
-        if email_thread_id is None and response_listener is None:
-            raise ValueError("email_thread_id or response_listener must be provided")
-        if email_thread_id is not None and subject is None:
-            latest_email_in_thread = Email.query.filter_by(thread_id=email_thread_id).order_by(Email.id.desc()).first()
+    def enqueue_message(self, content, recipient_email, parent_message_id=None, subject=None, estimated_time=None, response_listener=None):
+        if parent_message_id is None and subject is None:
+            raise ValueError("parent_message_id or subject must be provided")
+        if parent_message_id is None and response_listener is None:
+            raise ValueError("parent_message_id or response_listener must be provided")
+        if parent_message_id is not None and subject is None:
+            latest_email_in_thread = Email.query.filter_by(parent_message_id=parent_message_id).first()
             subject = latest_email_in_thread.subject
         if estimated_time is None:
             estimated_time = len(content.split(" ")) / 250 * 60 # 250 wpm
@@ -67,7 +67,7 @@ class MessageQueue(db.Model):
             queue_id=self.id,
             estimated_time=estimated_time,
             recipient_email=recipient_email,
-            email_thread_id=email_thread_id,
+            parent_message_id=parent_message_id,
             subject=subject,
             response_listener=response_listener
         )
@@ -119,12 +119,12 @@ class MessageQueue(db.Model):
 
     def send_enqueued_message(self, enqueued_message):
         gmail_response = GmailClient(user_id=self.user_id).send_message(enqueued_message)
-        thread_id = enqueued_message.email_thread_id or gmail_response['threadId']
+        thread_id = gmail_response['threadId']
         EmailEventBus.register_listener(thread_id, enqueued_message.response_listener)
         enqueued_message.mark_as_sent(thread_id)
 
     def get_next_message(self, estimated_time_threshold=None):
         query = db_session.query(EnqueuedMessage).filter(EnqueuedMessage.queue_id == self.id, EnqueuedMessage.sent_at == None)
-        if estimated_time_threshold:
+        if estimated_time_threshold is not None:
             query = query.filter(EnqueuedMessage.estimated_time <= estimated_time_threshold)
         return query.order_by(EnqueuedMessage.created_at).first()

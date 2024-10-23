@@ -6,7 +6,9 @@ from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
 from src.skills.zettel.file_management_service import FileManagementService
-from src.skills.zettel.zettel import LOCAL_DOCS_FOLDER
+from src.skills.zettel import LOCAL_DOCS_FOLDER
+from src.skills.zettel import ZettelkastenTopic
+from src.skills.interest import OpenQuestion
 import src.views.skills
 import os
 from src.models import *
@@ -40,6 +42,14 @@ app.add_url_rule('/skills', view_func=src.views.skills.index)
 def current_user():
     return User.query.filter_by(name=config('ME')).first()
 
+def sync_mailbox():
+    # with app.app_context():
+    check_mailbox()
+
+def send_enqueued_messages():
+    # with app.app_context():
+    send_next_message_if_bandwidth_available()
+
 def ask_get_to_know_you():
     # GetToKnowYouSkill.ask_get_to_know_you(me, initial_doc)
     GetToKnowYouSkill.ask_get_to_know_you_latest_zettelkasten_notes(current_user())
@@ -48,19 +58,20 @@ def ponder_wittgenstein():
     PonderWittgensteinSkill.ponder_wittgenstein(current_user())
 
 def sync_local_docs():
+    # with app.app_context():
     FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
 
 
 app.config['JOBS'] = [
     {
         'id': 'check_mailbox',
-        'func': 'app:check_mailbox',
+        'func': 'app:sync_mailbox',
         'trigger': 'interval',
         'minutes': 17
     },
     {
-        'id': 'send_next_message_if_bandwidth_available',
-        'func': 'app:send_next_message_if_bandwidth_available',
+        'id': 'send_enqueued_messages',
+        'func': 'app:send_enqueued_messages',
         'trigger': 'interval',
         'minutes': 29
     },
@@ -102,20 +113,23 @@ register_all_routes()
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
-    # ponder_wittgenstein()
-    # ask_get_to_know_you()
-    scheduler = APScheduler()
-    scheduler.init_app(app)
-    scheduler.start()
+    # scheduler = APScheduler()
+    # scheduler.init_app(app)
+    # scheduler.start()
 
     # Function to shut down the scheduler
-    @app.teardown_appcontext
-    def shutdown_scheduler(exception=None):
-        scheduler.shutdown()
+    # @app.teardown_appcontext
+    # def shutdown_scheduler(exception=None):
+    #     scheduler.shutdown()
 
-    # init_db()
     with app.app_context():
+        # ponder_wittgenstein()
+        # ask_get_to_know_you()
         check_mailbox()
         send_next_message_if_bandwidth_available()
-        sync_local_docs()
-        app.run(port=5000, debug=True, use_reloader=True)
+        # sync_local_docs()
+        # topics = db_session.query(ZettelkastenTopic).filter(ZettelkastenTopic.user_id == current_user().id).all()
+        # for topic in topics:
+        #     print(f"Speculating open questions for topic: {topic.name}")
+        #     OpenQuestion.speculate_open_questions_from_topic(topic)
+        # app.run(port=5000, debug=True, use_reloader=True)

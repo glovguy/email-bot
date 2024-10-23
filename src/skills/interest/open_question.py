@@ -1,3 +1,4 @@
+import json
 from typing import List
 from decouple import config
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, Index, event
@@ -7,7 +8,11 @@ from src.models import db, Vector, db_session
 from src.skills.email.message_queue import MessageQueue
 import anthropic
 from src.skills.email import GmailClient
+from src.skills.zettel import Zettel
+from src.log_chat_messages import log_chat_messages
 
+
+BOT_EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 
 def instructor_note_embed(doc_string):
     instruction = "Represent an open question or problem that the user is interested in: "
@@ -22,7 +27,7 @@ class OpenQuestion(db.Model):
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # user = relationship("User", back_populates="open_questions")
+    user = relationship("User", back_populates="open_questions")
     instructor_base_embedding = Column(Vector(768))
 
     __table_args__ = (
@@ -60,12 +65,14 @@ class OpenQuestion(db.Model):
                 "content": prompt_message
             }
         ]
+        speculation_system_prompt = "The user will provide notes that fit in a Zettelkasten topic group. They are written in markdown. Please speculate the open questions and problems they are interested in. These will only be suggestions for the user; the user will determine if they are interesting or not.Your goal is to help the user articulate themselves and distill their knowledge. Please be concise. Please do not speculate more than 10 open questions. Pick only the most interesting ones. Do not use generic jargon. Feel free to use technical terms, but do not use them if they are not relevant. Imitate the tone and style of the notes, but not their content. Please respond in the form of an inquiry to the user to confirm these questions and problems. Do not use markdown."
+        log_chat_messages(speculation_messages, speculation_system_prompt)
         speculation_response = client.messages.create(
             messages=speculation_messages,
             model="claude-3-5-sonnet-20240620",
             max_tokens=1000,
-            temperature=1.4,
-            system="You are a helpful assistant. The user will provide notes that fit in a Zettelkasten topic group. They are written in markdown. Please speculate the open questions and problems they are interested in. Please be concise. Please do not speculate more than 10 open questions. Pick only the most interesting ones. Do not use generic jargon. Feel free to use technical terms, but do not use them if they are not relevant. Imitate the tone and style of the notes, but not their content. Please respond in the form of an inquiry to the user to confirm these questions and problems. Do not use markdown."
+            temperature=0.7,
+            system=speculation_system_prompt,
         ).content[0].text
 
         message_queue = MessageQueue.get_or_create(topic.user_id, "open_questions")
@@ -106,24 +113,34 @@ email_response_tool_specs = [
 
 def handle_open_question_user_response(email):
     print("handling email! email.to_email_address: ", email.to_email_address)
-    if email.to_email_address != config('EMAIL_ADDRESS'):
+    if email.to_email_address != BOT_EMAIL_ADDRESS or email.from_email_address == BOT_EMAIL_ADDRESS:
         print("email not sent to bot, skipping")
         return
     client = anthropic.Anthropic(
         api_key=config('ANTHROPIC_API_KEY')
     )
     user_id = 1
+
     gmail_client = GmailClient(user_id=user_id)
-    chat_history = gmail_client.thread_as_chat_history(email.thread_id)
-    print("chat_history: ", chat_history)
+    email_content = gmail_client.get_email_content(email)
+    zettels = ["# "+ztl.title+"\n\n"+ztl.content for ztl, _ in Zettel.find_similar(email_content, limit=20)]
+    thread_chat = gmail_client.thread_as_chat_history(email.thread_id)
+    full_chat = [
+        {
+            "role": "user",
+            "content": "Here are some Zettelkasten notes I wrote that might be relevant to the discussion.\n\n<zettelkasten_notes>\n\n" + "\n\n---\n\n".join(zettels) + "\n\n</zettelkasten_notes>\n\nThis concludes my notes.Feel free to reference them or ignore them in your discussion. They were retrieved automatically, so they are not necessarily relevant."
+        },
+        *thread_chat
+    ]
+    open_question_bot_system_prompt = "The user has responded to a question about the open questions and problems they would find interesting. Also provided are Zettelkasten notes written by the user that fit in a topic group. They are written in markdown. If the user's answer is sufficient to determine the open questions or problems they are interested in, please use the store_open_question tool to store them in the database. If it is not clear, simply ask the user for clarification. Do not use generic jargon. Feel free to use technical terms, but do not use them if they are not relevant.Please be concise. Please do not speculate more than 10 open questions. Pick only the most interesting ones. Imitate the tone and style of the user, but not their content. Do not use markdown."
+    log_chat_messages(full_chat, open_question_bot_system_prompt)
     open_question_bot_response = client.messages.create(
-        messages=chat_history,
+        messages=full_chat,
         model="claude-3-5-sonnet-20240620",
         max_tokens=1000,
-        system="The user has responded to a question about the open questions and problems they would find interesting. Also provided are Zettelkasten notes written by the user that fit in a topic group. They are written in markdown. If the user's answer is sufficient to determine the open questions or problems they are interested in, please use the store_open_question tool to store them in the database. If it is not clear, simply ask the user for clarification. Do not use generic jargon. Feel free to use technical terms, but do not use them if they are not relevant.Please be concise. Please do not speculate more than 10 open questions. Pick only the most interesting ones. Imitate the tone and style of the user, but not their content. Do not use markdown.",
+        system=open_question_bot_system_prompt,
         tools=email_response_tool_specs
     )
-    print("open_question_bot_response: ", open_question_bot_response)
     email_response_content = ""
     send_email = False
     for msg in open_question_bot_response.content:
@@ -142,6 +159,6 @@ def handle_open_question_user_response(email):
             email_response_content, 
             email.from_email_address, 
             response_listener=handle_open_question_user_response, 
-            email_thread_id=email.thread_id, 
-            subject=f"RE: {email.subject}"
+            parent_message_id=email.message_id,
+            subject=email.subject
         )
