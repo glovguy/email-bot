@@ -171,3 +171,5 @@ documents_collection/
 
 # Google secrets file
 *.apps.googleusercontent.com.json
+
+chat_logs/
