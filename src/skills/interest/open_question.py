@@ -136,7 +136,7 @@ def handle_open_question_user_response(email):
     log_chat_messages(full_chat, open_question_bot_system_prompt)
     open_question_bot_response = client.messages.create(
         messages=full_chat,
-        model="claude-3-5-sonnet-20240620",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         system=open_question_bot_system_prompt,
         tools=email_response_tool_specs

@@ -52,22 +52,6 @@ class GmailClient():
                 messages.append(msg)
         return "\n\n---\n\n".join(messages)
 
-    def email_as_chat_entry(self, email: Email) -> List[Dict[str, str]]:
-        role = "assistant" if email.from_email_address == BOT_EMAIL_ADDRESS else "user"
-        gmail_message = self.get_message(email.gmail_id)
-        if "parts" not in gmail_message["payload"]:
-            return self.part_as_email_content(gmail_message["payload"])
-
-        messages = []
-        for part in gmail_message["payload"]["parts"]:
-            msg = self.part_as_email_content(part)
-            if msg is not None:
-                messages.append({ 
-                    "role": role,
-                    "content": msg 
-                })
-        return messages
-
     def thread_as_chat_history(self, thread_id: str) -> List[Dict[str, str]]:
         emails_in_thread = Email.query.filter_by(thread_id=thread_id).order_by(Email.received_at).all()
         messages = []
@@ -81,7 +65,7 @@ class GmailClient():
         return messages
 
     def part_as_email_content(self, part: Dict[str, Any]) -> str:
-        if part["mimeType"] == "text/plain" and "body" in part:
+        if (part["mimeType"] == "text/plain" or part["mimeType"] == "text/html") and "body" in part:
             email_content = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8")
 
             # Extract only the reply content
