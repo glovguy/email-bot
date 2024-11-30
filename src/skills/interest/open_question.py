@@ -70,7 +70,7 @@ class OpenQuestion(db.Model):
         speculation_response = client.messages.create(
             messages=speculation_messages,
             model="claude-3-5-sonnet-20240620",
-            max_tokens=1000,
+            max_tokens=1024,
             temperature=0.7,
             system=speculation_system_prompt,
         ).content[0].text
@@ -137,7 +137,7 @@ def handle_open_question_user_response(email):
     open_question_bot_response = client.messages.create(
         messages=full_chat,
         model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
+        max_tokens=1024,
         system=open_question_bot_system_prompt,
         tools=email_response_tool_specs
     )

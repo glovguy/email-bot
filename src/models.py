@@ -13,10 +13,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
-
+POSTGRES_DATABASE_NAME = "bot_memory"
 POSTGRES_USERNAME = config("POSTGRES_USERNAME")
 POSTGRES_PASSWORD = config("POSTGRES_PASSWORD")
-POSTGRES_DATABASE_NAME = "bot_memory"
 
 POSTGRES_DATABASE_URL = URL.create(
     drivername="postgresql+psycopg2",
@@ -28,9 +27,13 @@ POSTGRES_DATABASE_URL = URL.create(
 )
 SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
 
-# singleton db session, no multithreading
-engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
-db_session = scoped_session(sessionmaker(autoflush=True, bind=engine))
+def init_session():
+    # singleton db session, no multithreading
+    engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
+    db_session = scoped_session(sessionmaker(autoflush=True, bind=engine))
+    return engine, db_session
+
+engine, db_session = init_session()
 
 Base = declarative_base()
 Base.query = db_session.query_property()
@@ -114,12 +117,6 @@ class User(db.Model):
         if self.signatures_csv:
             return self.signatures_csv.split(',')
         return []
-
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
-    create_vector_extension()
-
 
 # deprecated
 class EmailOld(db.Model):
@@ -212,3 +209,20 @@ class EmailOld(db.Model):
     def email_chain(self):
         msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']
         return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
+
+
+def setup_db():
+    print("running setup!")
+    # Create database if it doesn't exist
+    temp_engine = create_engine(f"postgresql+psycopg2://{POSTGRES_USERNAME}:{POSTGRES_PASSWORD}@localhost/postgres")
+    conn = temp_engine.connect()
+    conn.execute(text("commit"))
+    try:
+        conn.execute(text(f"CREATE DATABASE {POSTGRES_DATABASE_NAME}"))
+    except:
+        pass
+    conn.close()
+    temp_engine.dispose()
+    # Create models
+    Base.metadata.create_all(bind=engine)
+    create_vector_extension()
