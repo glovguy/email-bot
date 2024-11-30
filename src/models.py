@@ -104,7 +104,6 @@ class User(db.Model):
     topics = relationship("ZettelkastenTopic", back_populates="user")
     message_queues = relationship("MessageQueue", back_populates="user")
     emails = relationship("Email", back_populates="user")
-    signatures_csv = Column(String) # comma separated list of exact string signatures used
     hour_awake = Column(Integer, default=9) # when we would expect the user to read and respond to emails
     hour_bedtime = Column(Integer, default=17)
     open_questions = relationship("OpenQuestion", back_populates="user")
@@ -112,11 +111,16 @@ class User(db.Model):
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
 
-    @property
-    def signatures(self):
-        if self.signatures_csv:
-            return self.signatures_csv.split(',')
-        return []
+def create_user(email_address, name, hour_awake=9, hour_bedtime=17):
+    user = User(
+        email_address=email_address,
+        name=name,
+        hour_awake=hour_awake,
+        hour_bedtime=hour_bedtime
+    )
+    db_session.add(user)
+    db_session.commit()
+    return user
 
 # deprecated
 class EmailOld(db.Model):
@@ -169,8 +173,6 @@ class EmailOld(db.Model):
             [*main_body, _] = body.split("\nOn ")
             body = "\nOn ".join(main_body)
         thread_path = EmailOld.thread_path_from_parent(message_id, in_reply_to=in_reply_to)
-        for sig in sender_user.signatures:
-            body = body.replace(sig, '').strip()
         recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(msg.get_all('to', []))]
         
         email_instance = EmailOld(
