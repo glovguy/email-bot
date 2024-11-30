@@ -123,8 +123,11 @@ def create_user(email_address, name, hour_awake=9, hour_bedtime=17):
     return user
 
 # deprecated
-class EmailOld(db.Model):
-    __tablename__ = 'emails_old'
+class EmailOld:
+    """
+    Legacy email class, no longer mapped to database table.
+    Kept for compatibility with existing code.
+    """
 
     id = Column(Integer, primary_key=True)
     sender = Column(String, nullable=False)
