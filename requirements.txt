@@ -12,10 +12,9 @@ psycopg2==2.9.9
 psycopg2-binary==2.9.9
 python-decouple==3.8
 pyzmail36==1.0.5
-# langchain==0.0.133
 openai==0.28.1
 sentence-transformers==2.2.2
-google-auth==2.33.0
+google-auth==2.37.0
 google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
 google-api-python-client==2.140.0

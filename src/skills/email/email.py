@@ -24,6 +24,9 @@ class Email(db.Model):
     received_at = Column(DateTime, nullable=False)
     message_id = Column(String, nullable=True)
 
+    def __repr__(self):
+        return f"<Email(id={self.id}, gmail_id={self.gmail_id}, from_email_address='{self.from_email_address}', subject='{self.subject}')>"
+
     @classmethod
     def from_raw_gmail(cls, raw_email, user_id):
         payload = raw_email["payload"]

@@ -34,7 +34,7 @@ def emails_display():
 def oauth2callback():
     GmailClient.credentials_from_oauth_redirect(request.url, current_user().id)
     print("Credentials successfully created")
-    return redirect('/emails')
+    return redirect('/email')
 
 
 # TODO: move to a top-level module

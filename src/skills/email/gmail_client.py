@@ -20,12 +20,13 @@ flow = Flow.from_client_secrets_file(
         'https://www.googleapis.com/auth/gmail.modify', 
         'https://www.googleapis.com/auth/gmail.send'
     ],
-    redirect_uri='http://localhost:5000/oauth2callback',
+    redirect_uri='http://localhost:5000/email/oauth2callback',
 )
 BOT_EMAIL_ADDRESS = config("EMAIL_ADDRESS")
 
 class GmailClient():
     def __init__(self, user_id=None) -> None:
+        # TODO: OauthCredential should not be per user, but per bot email address
         self.credentials = db_session.query(OAuthCredential).filter_by(user_id=user_id).first().to_credentials()
         self.user_id = user_id
         self.gmail_service = build('gmail', 'v1', credentials=self.credentials)

@@ -1,3 +1,4 @@
+from src.models import db_session, User
 from .oauth_credential import OAuthCredential
 from .gmail_client import GmailClient
 from .email import Email
@@ -5,12 +6,13 @@ from .enqueued_message import EnqueuedMessage
 from .message_queue import MessageQueue
 from .email_event_bus import EmailEventBus
 from .views import email_bp
-from src.models import db_session, User
-
+from .hello_world_test import enqueue_test_message
 
 def check_mailbox():
     print("checking mailbox...")
     users_with_credentials = db_session.query(User).join(OAuthCredential).all()
+    if len(users_with_credentials) == 0:
+        print("no users with credentials found")
     for user in users_with_credentials:
         gmail_client = GmailClient(user_id=user.id)
         gmail_client.fetch_emails_full_sync()
@@ -30,4 +32,4 @@ def register_routes(app):
     app.register_blueprint(email_bp)
 
 
-__all__ = ['Email', 'EnqueuedMessage', 'EmailEventBus']
+__all__ = ['Email', 'EnqueuedMessage', 'EmailEventBus', 'enqueue_test_message']

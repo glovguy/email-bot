@@ -144,19 +144,6 @@ class EmailOld:
     def __repr__(self):
         return f"<EmailOld(id={self.id}, uid={self.uid}, sender='{self.sender}', subject='{self.subject}')>"
     
-    @property
-    def recipients(self):
-        if self.recipients_csv:
-            return self.recipients_csv.split(',')
-        return []
-    
-    @recipients.setter
-    def recipients(self, recipients_list):
-        if recipients_list:
-            self.recipients_csv = ','.join(recipients_list)
-        else:
-            self.recipients_csv = None
-
     @classmethod
     def from_raw_email(cls, raw_email, email_uid):
         """Parse a raw email and return an instance of the Email model."""

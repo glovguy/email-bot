@@ -50,7 +50,7 @@ def measure_perplexity_of_zettels():
             'cross_entropy': cross_entropy,
         })
 
-    with open('zettel_perplexity.csv', 'w') as f:
+    with open('exports/zettel_perplexity.csv', 'w') as f:
         f.write("Filename,Perplexity,Cross Entropy\n")
         for result in sorted(results, key=lambda x: x['perplexity']):
             title = result['title'].replace(',', '\\,')
