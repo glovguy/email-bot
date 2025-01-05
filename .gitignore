@@ -173,3 +173,5 @@ documents_collection/
 *.apps.googleusercontent.com.json
 
 chat_logs/
+data/
+exports/
