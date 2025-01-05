@@ -111,12 +111,11 @@ class User(db.Model):
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
 
-def create_user(email_address, name, hour_awake=9, hour_bedtime=17):
+def create_user(email_address, name, **kwargs):
     user = User(
         email_address=email_address,
         name=name,
-        hour_awake=hour_awake,
-        hour_bedtime=hour_bedtime
+        **kwargs,
     )
     db_session.add(user)
     db_session.commit()

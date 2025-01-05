@@ -1,7 +1,9 @@
+from tqdm import tqdm
 from decouple import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
+from src.skills.zettel import Zettel
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
@@ -14,7 +16,7 @@ import os
 from src.models import *
 from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
 import importlib
-
+from src.skills.perplexity import measure_perplexity_of_zettels
 
 def create_app():
     app = Flask(__name__)
@@ -60,7 +62,6 @@ def ponder_wittgenstein():
 def sync_local_docs():
     # with app.app_context():
     FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
-
 
 app.config['JOBS'] = [
     {
@@ -127,7 +128,8 @@ if __name__ == '__main__':
         # ask_get_to_know_you()
         check_mailbox()
         send_next_message_if_bandwidth_available()
-        # sync_local_docs()
+        sync_local_docs()
+        measure_perplexity_of_zettels()
         # topics = db_session.query(ZettelkastenTopic).filter(ZettelkastenTopic.user_id == current_user().id).all()
         # for topic in topics:
         #     print(f"Speculating open questions for topic: {topic.name}")
