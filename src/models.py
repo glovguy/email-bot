@@ -143,7 +143,7 @@ class EmailOld:
 
     def __repr__(self):
         return f"<EmailOld(id={self.id}, uid={self.uid}, sender='{self.sender}', subject='{self.subject}')>"
-    
+
     @classmethod
     def from_raw_email(cls, raw_email, email_uid):
         """Parse a raw email and return an instance of the Email model."""
@@ -163,7 +163,7 @@ class EmailOld:
             body = "\nOn ".join(main_body)
         thread_path = EmailOld.thread_path_from_parent(message_id, in_reply_to=in_reply_to)
         recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(msg.get_all('to', []))]
-        
+
         email_instance = EmailOld(
             sender=msg.get_address('from')[1],
             recipients=recipients,
@@ -176,7 +176,7 @@ class EmailOld:
         )
         db_session.add(email_instance)
         db_session.commit()
-        
+
         return email_instance
 
     @classmethod

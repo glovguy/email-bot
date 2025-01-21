@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from .zettel import Zettel
 from src.models import db_session
 
@@ -27,7 +28,7 @@ class FileManagementService:
         print(f"{len(allDocs)} synced docs in db")
         items = os.listdir(folderPath)
         self.itemCount = len(items)
-        for item in items:
+        for item in tqdm(items, desc="Processing files"):
             if item.startswith('.'):
                 self.numSkippedInvalidItems += 1
                 continue
@@ -88,7 +89,7 @@ class FileManagementService:
     def delete_documents_missing_from_folder(self):
         zettelsToDelete = db_session.query(Zettel).filter(~Zettel.sha.in_(self.allShasInFiles)).all()
         self.zettelsWithoutFileDeleted = len(zettelsToDelete)
-        for ztl in zettelsToDelete:
+        for ztl in tqdm(zettelsToDelete, desc="Deleting docs without files"):
             print("deleting Zettel: ", ztl)
             db_session.delete(ztl)
     
@@ -103,6 +104,7 @@ class FileManagementService:
         print(f"Deleted {self.zettelsWithoutFileDeleted} docs without a corresponding file")
         numDocs = db_session.query(Zettel).count()
         print(f"Now {numDocs} synced docs in db")
+        db_session.commit()
 
     @classmethod
     def filter_out_metadata(cls, text: str) -> str:

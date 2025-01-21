@@ -8,6 +8,7 @@ from src.models import User
 from src.skills.zettel.file_management_service import FileManagementService
 from src.skills.zettel import LOCAL_DOCS_FOLDER
 from src.skills.zettel import ZettelkastenTopic
+from src.skills.zettel import Zettel
 from src.skills.interest import OpenQuestion
 import src.views.skills
 import os

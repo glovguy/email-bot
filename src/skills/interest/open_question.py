@@ -36,7 +36,7 @@ class OpenQuestion(db.Model):
 
     def __repr__(self):
         return f'<OpenQuestion {self.id}>'
-    
+
     @classmethod
     def speculate_open_questions_from_topic(cls, topic):
         zettels = topic.zettels[:20]
@@ -51,7 +51,7 @@ class OpenQuestion(db.Model):
             He said: \"You have to keep a dozen of your favorite problems constantly present in your mind, although by and large they \
             will lay in a dormant state. Every time you hear or read a new trick or a new result, test it against each of your twelve \
             problems to see whether it helps. Every once in a while there will be a hit, and people will say, \"How did he do it? He must be a genius!\"
-            
+
             The notes above are relevant to a particular topic and should indicate the kinds of thoughts and ideas I am interested in. \
             Please speculate problems and open questions that I might have about this topic. \
             These open questions should be open ended and not answerable with a simple yes or no, but they should be \
@@ -61,7 +61,7 @@ class OpenQuestion(db.Model):
             This is to allow you to keep track of what ideas I am interested in."""
         speculation_messages = [
             {
-                "role": "user", 
+                "role": "user",
                 "content": prompt_message
             }
         ]
@@ -156,9 +156,9 @@ def handle_open_question_user_response(email):
         print("enqueueing email response")
         message_queue = MessageQueue.get_or_create(user_id, "open_questions")
         message_queue.enqueue_message(
-            email_response_content, 
-            email.from_email_address, 
-            response_listener=handle_open_question_user_response, 
+            email_response_content,
+            email.from_email_address,
+            response_listener=handle_open_question_user_response,
             parent_message_id=email.message_id,
             subject=email.subject
         )
