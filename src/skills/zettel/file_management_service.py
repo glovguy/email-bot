@@ -45,7 +45,9 @@ class FileManagementService:
                 fileContentSha = Zettel.doc_sha(filtered_data)
                 self.allShasInFiles.add(fileContentSha)
                 title = item.removesuffix('.md')
-                existingZettels = db_session.query(Zettel).filter_by(sha=fileContentSha).all()
+                existingZettels = db_session.query(Zettel).filter(
+                    (Zettel.sha == fileContentSha) | (Zettel.filepath == item_path)
+                ).all()
                 if len(existingZettels) == 0:
                     # create
                     newZettel = Zettel(
@@ -56,12 +58,15 @@ class FileManagementService:
                     )
                     self.numDocsMade += 1
                     db_session.add(newZettel)
+                    db_session.commit()
                     continue
                 if len(existingZettels) > 1:
                     print('found multiple docs, deleting duplicates: ', [z.id for z in existingZettels[1:]])
+                    # Delete duplicates
                     duplicates = existingZettels[1:]
                     for dup in duplicates:
                         db_session.delete(dup)
+                    db_session.commit()
                     self.numFilesDeleted += len(duplicates)
                 if len(existingZettels) > 0:
                     # repair
@@ -70,15 +75,18 @@ class FileManagementService:
                     if ztl.content != filtered_data:
                         ztl.content = filtered_data
                         db_session.add(ztl)
+                        db_session.commit()
                         upsert_needed = True
                     if ztl.title != title:
                         ztl.title = title
                         db_session.add(ztl)
+                        db_session.commit()
                         upsert_needed = True
                     if ztl.filepath != item_path:
                         upsert_needed = True
                         ztl.filepath = item_path
                         db_session.add(ztl)
+                        db_session.commit()
                     if upsert_needed:
                         print("Repairing: ", [ztl.id for ztl in existingZettels])
                         self.numFilesMetadataUpdated += 1
@@ -92,6 +100,7 @@ class FileManagementService:
         for ztl in tqdm(zettelsToDelete, desc="Deleting docs without files"):
             print("deleting Zettel: ", ztl)
             db_session.delete(ztl)
+        db_session.commit()
     
     def print_sync_info(self):
         print("\n")
