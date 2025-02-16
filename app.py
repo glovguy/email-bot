@@ -2,7 +2,6 @@ from decouple import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
-from src.skills.readwise_discourse import fetch_and_discuss_latest_readwise
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
