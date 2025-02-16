@@ -4,13 +4,12 @@ from decouple import config
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, Index, event
 from sqlalchemy.orm import relationship
 from src.skills.base import default_embeddings_model
-from src.models import db, Vector, db_session
+from src.models import Base, Vector, db_session
 from src.skills.email.message_queue import MessageQueue
 import anthropic
 from src.skills.email import GmailClient
 from src.skills.zettel import Zettel
 from src.log_chat_messages import log_chat_messages
-
 
 BOT_EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 
@@ -19,7 +18,7 @@ def instructor_note_embed(doc_string):
     vec = default_embeddings_model.encode([[instruction, doc_string]]).tolist()
     return vec[0]
 
-class OpenQuestion(db.Model):
+class OpenQuestion(Base):
     __tablename__ = "open_questions"
 
     id = Column(Integer, primary_key=True)

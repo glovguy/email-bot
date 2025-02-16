@@ -1,6 +1,6 @@
 import math
 import inspect
-from src.models import db, db_session
+from src.models import Base, db_session
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -11,7 +11,7 @@ from .email import Email
 from .email_event_bus import EmailEventBus
 
 
-class MessageQueue(db.Model):
+class MessageQueue(Base):
     __tablename__ = 'message_queues'
 
     id = Column(Integer, primary_key=True)

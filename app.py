@@ -2,6 +2,7 @@ from decouple import config
 from flask import Flask
 from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
+from src.skills.readwise_discourse import fetch_and_discuss_latest_readwise
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
 from src.models import User
@@ -95,6 +96,7 @@ app.config['JOBS'] = [
     # }
 ]
 
+# unwieldy. Move them all over to the streamlit app
 def register_all_routes():
     skills_dir = os.path.join(os.path.dirname(__file__), 'src', 'skills')
     for skill in os.listdir(skills_dir):
@@ -108,12 +110,11 @@ def register_all_routes():
             except ImportError as e:
                 print(f"Could not import views for skill {skill}: {e}")
 
-register_all_routes()
-
 app.add_url_rule('/', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
+    register_all_routes()
     # scheduler = APScheduler()
     # scheduler.init_app(app)
     # scheduler.start()

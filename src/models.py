@@ -9,7 +9,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
-from flask_sqlalchemy import SQLAlchemy
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -28,17 +27,15 @@ POSTGRES_DATABASE_URL = URL.create(
 SQLALCHEMY_DATABASE_URI = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
 
 def init_session():
-    # singleton db session, no multithreading
     engine = create_engine(POSTGRES_DATABASE_URL.render_as_string(hide_password=False))
-    db_session = scoped_session(sessionmaker(autoflush=True, bind=engine))
+    SessionLocal = sessionmaker(autoflush=True, bind=engine)
+    db_session = scoped_session(SessionLocal)
     return engine, db_session
 
 engine, db_session = init_session()
 
 Base = declarative_base()
 Base.query = db_session.query_property()
-
-db = SQLAlchemy()
 
 class Vector(UserDefinedType):
     def __init__(self, dim):
@@ -93,7 +90,7 @@ def create_vector_extension():
     db_session.commit()
 
 
-class User(db.Model):
+class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)

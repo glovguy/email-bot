@@ -1,141 +1,83 @@
+from decouple import config
 import streamlit as st
-import pandas as pd
-from io import StringIO
-import plotly.express as px
+# import pandas as pd
+# from io import StringIO
+# import plotly.express as px
+
+from src.models import User
+from src.skills.interest import OpenQuestion
+from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
+from src.skills.readwise_discourse import fetch_and_discuss_latest_readwise
+from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
+from src.skills.get_to_know_you_skill import GetToKnowYouSkill
+from src.models import db_session
+from src.skills.zettel.file_management_service import FileManagementService
+from src.skills.zettel import LOCAL_DOCS_FOLDER
 
 # Set page title
-st.title('Note Perplexity Analysis')
+st.title('Triggering Events')
 
-@st.cache_data
-def load_data():
-    # First read the raw file and handle the escaped commas
-    processed_lines = []
-    with open('zettel_perplexity.csv', 'r') as file:
-        # Add header as first line
-        processed_lines.append(next(file).strip())
+st.write("This is a page for triggering events")
 
-        for line in file:
-            # Replace escaped commas with a temporary marker
-            processed = line.replace('\\,', '<<COMMA>>')
-            processed_lines.append(processed)
+st.write("You can trigger events by clicking the button below")
 
-    # Create a string buffer with processed lines
-    processed_data = '\n'.join(processed_lines)
-
-    # Read the processed data with pandas
-    df = pd.read_csv(StringIO(processed_data))
-
-    # Restore the original commas in the filename
-    df['Filename'] = df['Filename'].str.replace('<<COMMA>>', ',')
-
-    return df
-
-df = load_data()
-
-# Create an interactive bar chart using Plotly
-fig = px.bar(
-    df.sort_values('Perplexity'),  # Sort by perplexity
-    x='Filename',
-    y='Perplexity',
-    title='Perplexity Values by Note',
-    hover_data=['Cross Entropy']  # Show cross entropy on hover
-)
-
-# Customize the layout
-fig.update_layout(
-    xaxis_title="Note Filename",
-    yaxis_title="Perplexity",
-    xaxis_tickangle=-45  # Rotate x-axis labels for better readability
-)
-
-# Display the plot
-st.plotly_chart(fig, use_container_width=True)
-
-# Optional: Display the raw data below the chart
-if st.checkbox('Show raw data', key='show_raw_data'):
-    st.dataframe(df)
-
-# Basic statistical summary
-st.header("Statistical Analysis")
-st.write(f"""
-- Mean perplexity: {df['Perplexity'].mean():.2f}
-- Median perplexity: {df['Perplexity'].median():.2f}
-- Standard deviation: {df['Perplexity'].std():.2f}
-""")
-
-# Distribution analysis
-import plotly.figure_factory as ff
-
-fig_dist = ff.create_distplot(
-    [df['Perplexity']],
-    ['Perplexity'],
-    bin_size=5,
-    show_rug=True
-)
-st.subheader("Perplexity Distribution")
-st.plotly_chart(fig_dist, use_container_width=True)
-
-# Identify statistical outliers using IQR method
-Q1 = df['Perplexity'].quantile(0.25)
-Q3 = df['Perplexity'].quantile(0.75)
-IQR = Q3 - Q1
-outliers = df[
-    (df['Perplexity'] < (Q1 - 1.5 * IQR)) |
-    (df['Perplexity'] > (Q3 + 1.5 * IQR))
-]
-
-if not outliers.empty:
-    st.subheader("Statistical Outliers (1.5 IQR method)")
-    st.dataframe(
-        outliers[['Filename', 'Perplexity', 'Cross Entropy']]
-        .sort_values('Perplexity', ascending=False)
-    )
+st.button("Trigger Event")
 
 
-# Create filtered dataset without outliers
-df_filtered = df[
-    (df['Perplexity'] >= (Q1 - 1.5 * IQR)) &
-    (df['Perplexity'] <= (Q3 + 1.5 * IQR))
-]
 
-st.subheader("Distribution Without Outliers")
-
-# Create distribution plot for filtered data
-fig_dist_filtered = ff.create_distplot(
-    [df_filtered['Perplexity']],
-    ['Perplexity (Outliers Removed)'],
-    bin_size=5,
-    show_rug=True
-)
-st.plotly_chart(fig_dist_filtered, use_container_width=True)
-
-# Show basic stats for filtered data
-st.write(f"""
-- Mean perplexity (without outliers): {df_filtered['Perplexity'].mean():.2f}
-- Median perplexity (without outliers): {df_filtered['Perplexity'].median():.2f}
-- Standard deviation (without outliers): {df_filtered['Perplexity'].std():.2f}
-""")
+def current_user():
+    try:
+        user = db_session.query(User).filter_by(name=config('ME')).first()
+        return user
+    finally:
+        db_session.remove()  # Important: clean up the session after use
 
 
-# Create an interactive bar chart using Plotly
-filtered_fig = px.bar(
-    df_filtered.sort_values('Perplexity'),  # Sort by perplexity
-    x='Filename',
-    y='Perplexity',
-    title='Perplexity Values by Note',
-    hover_data=['Cross Entropy']  # Show cross entropy on hover
-)
+if st.button("Check Mailbox"):
+    try:
+        check_mailbox()
+    finally:
+        db_session.remove()
 
-# Customize the layout
-filtered_fig.update_layout(
-    xaxis_title="Note Filename",
-    yaxis_title="Perplexity",
-    xaxis_tickangle=-45  # Rotate x-axis labels for better readability
-)
+if st.button("Send Next Message"):
+    try:
+        send_next_message_if_bandwidth_available()
+    finally:
+        db_session.remove()
 
-# Display the plot
-st.plotly_chart(filtered_fig, use_container_width=True)
 
-# Optional: Display the raw data below the chart
-if st.checkbox('Show filtered data', key='filtered_data'):
-    st.dataframe(df_filtered)
+def sync_local_docs():
+    # with app.app_context():
+    try:
+        FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
+    finally:
+        db_session.remove()
+
+
+if st.button("Sync Local Docs"):
+    sync_local_docs()
+
+if st.button("Fetch and Discuss Latest Readwise"):
+    fetch_and_discuss_latest_readwise()
+
+
+
+def ponder_wittgenstein():
+    try:
+        PonderWittgensteinSkill.ponder_wittgenstein(current_user())
+    finally:
+        db_session.remove()
+
+if st.button("Ponder Wittgenstein"):
+    ponder_wittgenstein()
+
+
+def ask_get_to_know_you():
+    try:
+        GetToKnowYouSkill.ask_get_to_know_you_latest_zettelkasten_notes(current_user())
+    finally:
+        db_session.remove()
+
+
+if st.button("Ask Get to Know You"):
+    ask_get_to_know_you()

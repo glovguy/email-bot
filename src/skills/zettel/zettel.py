@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql.expression import cast
 import uuid
 from src.skills.base import default_embeddings_model
-from src.models import db, Vector, db_session
+from src.models import Base, Vector, db_session
 from .zettel_topic_association import ZettelTopicAssociation
 
 
@@ -18,7 +18,7 @@ def instructor_note_embed(doc_string) -> List[float]:
     vec = default_embeddings_model.encode([[instruction, doc_string]]).tolist()
     return vec[0]
 
-class Zettel(db.Model):
+class Zettel(Base):
     __tablename__ = "zettels"
 
     id = Column(Integer, primary_key=True)

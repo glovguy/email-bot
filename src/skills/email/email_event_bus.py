@@ -1,4 +1,4 @@
-from src.models import db, db_session
+from src.models import db_session, Base
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from .email import Email
@@ -7,7 +7,7 @@ import sys
 import logging
 
 
-class EmailCommandListener(db.Model):
+class EmailCommandListener(Base):
     __tablename__ = 'email_command_listeners'
 
     id = Column(Integer, primary_key=True)

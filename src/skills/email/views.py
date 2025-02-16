@@ -14,20 +14,7 @@ def emails_home():
         session['state'] = state
         return redirect(authorization_url)
     
-    return emails_display()
-
-
-def emails_display():
-    messages = Email.query.all() # TODO: scope by user
-
-    email_info = []
-    for msg in messages:
-        subject = msg.subject
-        sender = msg.from_email_address
-        email_info.append(f"Subject: {subject}, From: {sender}<br>{msg.snippet}")
-    
-    top_nav = "<h1>Email</h1><br><hr>"
-    return "<div>" + "</div><hr><div>".join(email_info) + "</div>"
+    return "<h1>Emails authenticated</h1>"
 
 
 @email_bp.route('/oauth2callback')

@@ -4,14 +4,14 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import numpy as np
 from typing import List, Tuple
-from src.models import db, Vector, cosine_similarity, db_session
+from src.models import Base, Vector, cosine_similarity, db_session
 from .zettel import Zettel
 from .zettel_topic_association import ZettelTopicAssociation
 import anthropic
 from decouple import config
 
 
-class ZettelkastenTopic(db.Model):
+class ZettelkastenTopic(Base):
     __tablename__ = 'zettelkasten_topics'
 
     id = Column(Integer, primary_key=True)

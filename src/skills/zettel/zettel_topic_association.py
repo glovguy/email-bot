@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Float, Integer, ForeignKey
-from src.models import db
+from src.models import Base
 
 
-class ZettelTopicAssociation(db.Model):
+class ZettelTopicAssociation(Base):
     __tablename__ = 'zettel_topic_association'
 
     zettel_id = Column(Integer, ForeignKey('zettels.id'), primary_key=True)

@@ -1,12 +1,12 @@
 from datetime import datetime
 import json
 from google.oauth2.credentials import Credentials
-from src.models import db, db_session
+from src.models import db_session, Base
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 
 
-class OAuthCredential(db.Model):
+class OAuthCredential(Base):
     __tablename__ = "oauth_credentials"
 
     id = Column(Integer, primary_key=True)

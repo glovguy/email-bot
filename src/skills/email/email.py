@@ -1,10 +1,10 @@
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from src.models import db, db_session
+from src.models import Base, db_session
 
 
-class Email(db.Model):
+class Email(Base):
     """
     Represents an email from the Gmail API.
     """
