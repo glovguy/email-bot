@@ -16,6 +16,7 @@ from src.models import *
 from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
 import importlib
 from src.skills.perplexity import measure_perplexity_of_zettels
+from src.custom_types import SemanticContext
 
 def create_app():
     app = Flask(__name__)
