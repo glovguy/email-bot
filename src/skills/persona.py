@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String
-from src.models import Base
+from src.models import Base, User
 from src.custom_types import SemanticContext
-
 
 class Persona(Base):
     __tablename__ = 'personas'
@@ -28,3 +27,8 @@ class Persona(Base):
             "description": self.description,
             "system_prompt": self.system_prompt
         }
+
+    def create_conversation(self):
+        """Create a conversation with this persona"""
+        from src.conversation import PersonaConversation
+        return PersonaConversation(self)

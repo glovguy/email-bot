@@ -2,6 +2,7 @@ from typing import TypedDict
 from typing import Protocol, List, Dict, Any
 
 class SemanticContext(Protocol):
+    thread: List[Dict[str, str]]
     name: str
     description: str
     system_prompt: str
