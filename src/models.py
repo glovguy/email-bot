@@ -3,12 +3,13 @@ import re
 import numpy as np
 from email.utils import getaddresses
 from pyzmail import PyzMessage
-from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func, Text
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
+import datetime
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -101,9 +102,11 @@ class User(Base):
     topics = relationship("ZettelkastenTopic", back_populates="user")
     message_queues = relationship("MessageQueue", back_populates="user")
     emails = relationship("Email", back_populates="user")
+    contacts = relationship("Contact", back_populates="user")
     hour_awake = Column(Integer, default=9) # when we would expect the user to read and respond to emails
     hour_bedtime = Column(Integer, default=17)
     open_questions = relationship("OpenQuestion", back_populates="user")
+    app_settings = relationship("AppSetting", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
@@ -214,3 +217,38 @@ def setup_db():
     # Create models
     Base.metadata.create_all(bind=engine)
     create_vector_extension()
+
+
+class AppSetting(Base):
+    """Model for storing application settings"""
+    __tablename__ = 'app_settings'
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), nullable=False, unique=True, index=True)
+    value = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="app_settings")
+
+    @classmethod
+    def get(cls, key, user_id=None, default=None):
+        """Get a setting value by key"""
+        query = cls.query.filter_by(key=key)
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        setting = query.first()
+        return setting.value if setting else default
+
+    @classmethod
+    def set(cls, key, value, user_id=None):
+        """Set a setting value"""
+        setting = cls.query.filter_by(key=key).filter_by(user_id=user_id).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = cls(key=key, value=value, user_id=user_id)
+            db_session.add(setting)
+        db_session.commit()
+        return setting
