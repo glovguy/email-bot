@@ -2,14 +2,11 @@ import streamlit as st
 import os
 import platform
 import pandas as pd
-import json
-import uuid
-from datetime import datetime
 
-from src.models import db_session, User, AppSetting
-from src.skills.email import OAuthCredential
-from src.skills.zettel import zettel
-from src.skills.interest import OpenQuestion
+from src.models import db_session, User, AppSetting # type: ignore
+from src.skills.email import OAuthCredential # type: ignore
+from src.skills.zettel import zettel # type: ignore
+from src.skills.interest import OpenQuestion # type: ignore
 from src.skills.social_stockfish.models import Contact
 from src.skills.social_stockfish.imessage_import import iMessageImporter
 from src.skills.social_stockfish.contacts_import import ContactsImporter
@@ -152,11 +149,10 @@ with contacts_tab:
                     
                     # Populate contacts data
                     for contact in contacts:
-                        if contact.identifier_type == 'phone':
+                        if str(contact.identifier_type) == 'phone':
                             st.session_state.contacts_data['phone'][contact.normalized_identifier] = contact.name
-                        elif contact.identifier_type == 'email':
+                        elif str(contact.identifier_type) == 'email':
                             st.session_state.contacts_data['email'][contact.normalized_identifier] = contact.name
-                        
                         st.session_state.contacts_data['all'][contact.normalized_identifier] = contact.name
                     
                     st.success(f"Loaded {len(contacts)} contacts")

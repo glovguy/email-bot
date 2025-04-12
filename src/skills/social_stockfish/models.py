@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from src.models import Base, db_session
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import datetime
 
 
@@ -31,7 +31,7 @@ class ConversationHistory(Base):
 
     @classmethod
     def from_message_list(cls, message_list: List[Dict[str, Any]], title: str, user_id: int, 
-                         description: str = None, source: str = None):
+                         description: Optional[str] = None, source: Optional[str] = None):
         """Create a conversation record from a list of message objects"""
         conversation = cls(
             title=title,
@@ -112,6 +112,7 @@ class Simulation(Base):
         return selected_approach
 
 
+# I don't think this is needed, but I'm keeping it here for now
 class SelectedApproach(Base):
     """
     Represents the final selected best approach for a conversation.
@@ -150,11 +151,21 @@ class Contact(Base):
         return f"<Contact {self.name}: {self.identifier}>"
     
     @classmethod
-    def normalize_identifier(cls, identifier: str, identifier_type: str) -> str:
+    def normalize_identifier(cls, identifier: str, identifier_type: str | None = None) -> str:
         """Normalize the identifier to a standard format"""
+        if identifier_type is None:
+            # guess the identifier type
+            identifier_type = cls.guess_identifier_type(identifier)
+            
         if identifier_type == 'phone':
             return f"phone_{identifier.replace("-", "").replace("+1", "")}"
         elif identifier_type == 'email':
             return f"email_{identifier.lower().strip()}"
         else:
             raise ValueError(f"Invalid identifier type: {identifier_type}")
+
+    @classmethod
+    def guess_identifier_type(cls, identifier: str) -> str:
+        if '@' in identifier:
+            return 'email'
+        return 'phone'

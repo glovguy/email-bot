@@ -1,0 +1,8 @@
+{
+  "include": ["src"],
+  "exclude": ["**/node_modules", "**/__pycache__", "build"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict",
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false
+}

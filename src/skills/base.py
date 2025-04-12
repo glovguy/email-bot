@@ -14,7 +14,10 @@ EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 documents_collection_path = config('DOCUMENTS_COLLECTION_PATH', default="./documents_collection")
-chroma_client = chromadb.PersistentClient(path=documents_collection_path)
+chroma_client = chromadb.PersistentClient(
+    path=documents_collection_path,
+    settings=chromadb.config.Settings(anonymized_telemetry=False)
+)
 default_embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 class SkillBase(object):

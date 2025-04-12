@@ -1,7 +1,14 @@
 import os
 import sqlite3
 import traceback
-from typing import List, Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, TypedDict
+from src.skills.social_stockfish.models import Contact
+
+class ContactsImportDict(TypedDict):
+    all: Dict[str, str]
+    phone: Dict[str, str]
+    email: Dict[str, str]
+
 
 class ContactsImporter:
     """
@@ -122,7 +129,7 @@ class ContactsImporter:
             return False, error_msg
     
     @classmethod
-    def import_contacts(cls, db_path: Optional[str] = None) -> Dict[str, Dict[str, str]]:
+    def import_contacts(cls, db_path: Optional[str] = None) -> ContactsImportDict:
         """
         Imports contacts from the Address Book database.
         
@@ -133,7 +140,7 @@ class ContactsImporter:
             Dictionary mapping phone numbers and emails to contact names
         """
         path = db_path or cls.get_database_path()
-        contacts = {
+        contacts: ContactsImportDict = {
             "phone": {},  # Maps phone numbers to names
             "email": {},  # Maps emails to names
             "all": {}     # Maps all identifiers to names
@@ -147,7 +154,7 @@ class ContactsImporter:
         if os.path.isdir(path):
             # Try to find SQLite databases in the directory
             try:
-                for root, dirs, files in os.walk(path):
+                for root, _dirs, files in os.walk(path):
                     for file in files:
                         if file.endswith('.abcddb') or file.endswith('.sqlite'):
                             db_file = os.path.join(root, file)
@@ -169,7 +176,7 @@ class ContactsImporter:
         return contacts
     
     @classmethod
-    def _extract_contacts_from_db(cls, db_path: str, contacts: Dict[str, Dict[str, str]]) -> None:
+    def _extract_contacts_from_db(cls, db_path: str, contacts: ContactsImportDict) -> None:
         """
         Extracts contacts from a specific database file.
         Updates the contacts dictionary in place.
@@ -211,7 +218,7 @@ class ContactsImporter:
                         name = f"{first_name or ''} {last_name or ''}".strip()
                         if name and phone:
                             # Normalize phone number
-                            phone = cls._normalize_phone(phone)
+                            phone = Contact.normalize_identifier(phone, 'phone')
                             contacts['phone'][phone] = name
                             contacts['all'][phone] = name
                 except Exception as e:
@@ -237,8 +244,9 @@ class ContactsImporter:
                         first_name, last_name, email = row
                         name = f"{first_name or ''} {last_name or ''}".strip()
                         if name and email:
-                            contacts['email'][email.lower()] = name
-                            contacts['all'][email.lower()] = name
+                            email = Contact.normalize_identifier(email, 'email')
+                            contacts['email'][email] = name
+                            contacts['all'][email] = name
                 except Exception as e:
                     print(f"Error extracting emails (schema 1): {str(e)}")
             
@@ -262,7 +270,7 @@ class ContactsImporter:
                         first_name, last_name, phone = row
                         name = f"{first_name or ''} {last_name or ''}".strip()
                         if name and phone:
-                            phone = cls._normalize_phone(phone)
+                            phone = Contact.normalize_identifier(phone, 'phone')
                             contacts['phone'][phone] = name
                             contacts['all'][phone] = name
                 except Exception as e:

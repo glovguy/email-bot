@@ -2,6 +2,7 @@ from decouple import config
 import re
 import numpy as np
 from email.utils import getaddresses
+from typing import Optional
 from pyzmail import PyzMessage
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func, Text
 from sqlalchemy.engine.url import URL
@@ -202,6 +203,41 @@ class EmailOld:
         return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
 
 
+class AppSetting(Base):
+    """Model for storing application settings"""
+    __tablename__ = 'app_settings'
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), nullable=False, unique=True, index=True)
+    value = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="app_settings")
+
+    @classmethod
+    def get(cls, key: str, user_id: Optional[int] = None, default: Optional[str] = None) -> str | None:
+        """Get a setting value by key"""
+        query = cls.query.filter_by(key=key)
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        setting = query.first()
+        return setting.value if setting else default
+
+    @classmethod
+    def set(cls, key: str, value: str, user_id: Optional[int] = None):
+        """Set a setting value"""
+        setting = cls.query.filter_by(key=key).filter_by(user_id=user_id).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = cls(key=key, value=value, user_id=user_id)
+            db_session.add(setting)
+        db_session.commit()
+        return setting
+
+
 def setup_db():
     print("running setup!")
     # Create database if it doesn't exist
@@ -217,38 +253,3 @@ def setup_db():
     # Create models
     Base.metadata.create_all(bind=engine)
     create_vector_extension()
-
-
-class AppSetting(Base):
-    """Model for storing application settings"""
-    __tablename__ = 'app_settings'
-
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255), nullable=False, unique=True, index=True)
-    value = Column(Text, nullable=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
-    user = relationship("User", back_populates="app_settings")
-
-    @classmethod
-    def get(cls, key, user_id=None, default=None):
-        """Get a setting value by key"""
-        query = cls.query.filter_by(key=key)
-        if user_id:
-            query = query.filter_by(user_id=user_id)
-        setting = query.first()
-        return setting.value if setting else default
-
-    @classmethod
-    def set(cls, key, value, user_id=None):
-        """Set a setting value"""
-        setting = cls.query.filter_by(key=key).filter_by(user_id=user_id).first()
-        if setting:
-            setting.value = value
-        else:
-            setting = cls(key=key, value=value, user_id=user_id)
-            db_session.add(setting)
-        db_session.commit()
-        return setting

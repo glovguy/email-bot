@@ -1,10 +1,16 @@
+import json
 import time
 import os
+from typing import List, TypedDict, Dict, Any
 
 CHAT_LOGS_DIR = "chat_logs"
 os.makedirs(CHAT_LOGS_DIR, exist_ok=True)
 
-def log_chat_messages(messages, system_prompt):
+class LlmChatMessage(TypedDict):
+    role: str
+    message: str
+
+def log_chat_messages(messages: List[LlmChatMessage], system_prompt: str | None = None, metadata: Dict[Any, Any] | None = None):
     """
     Write an array of message dictionaries to a text file.
     The filename is the current Unix timestamp.
@@ -21,7 +27,10 @@ def log_chat_messages(messages, system_prompt):
     filepath = os.path.join(CHAT_LOGS_DIR, filename)
 
     with open(filepath, 'w', encoding='utf-8') as file:
-        file.write(f"=== System ===\n\n{system_prompt}\n\n")
+        if metadata:
+            file.write(f"=== Metadata ===\n\n{json.dumps(metadata, indent=2)}\n\n")
+        if system_prompt:
+            file.write(f"=== System ===\n\n{system_prompt}\n\n")
         for message in messages:
             role = message.get('role', 'Unknown')
             content = message.get('content', '')
