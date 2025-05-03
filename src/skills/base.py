@@ -7,7 +7,7 @@ import os
 import requests
 import uuid6
 from src.openai_client import OpenAIClient
-from src.email_inbox import EmailInbox
+# from src.email_inbox import EmailInbox
 from src.models import db_session
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -22,7 +22,7 @@ default_embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 class SkillBase(object):
     llm_client = OpenAIClient()
-    email_inbox = EmailInbox()
+    # email_inbox = EmailInbox()
 
     @classmethod
     def print_traceback(cls, e):

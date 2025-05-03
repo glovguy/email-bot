@@ -11,6 +11,7 @@ from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
 import datetime
+import importlib
 
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -218,24 +219,79 @@ class AppSetting(Base):
 
     @classmethod
     def get(cls, key: str, user_id: Optional[int] = None, default: Optional[str] = None) -> str | None:
-        """Get a setting value by key"""
-        query = cls.query.filter_by(key=key)
-        if user_id:
-            query = query.filter_by(user_id=user_id)
-        setting = query.first()
+        """Get a setting value by key and optional user_id"""
+        setting = db_session.query(cls).filter(cls.key == key, cls.user_id == user_id).first()
         return setting.value if setting else default
 
     @classmethod
     def set(cls, key: str, value: str, user_id: Optional[int] = None):
-        """Set a setting value"""
-        setting = cls.query.filter_by(key=key).filter_by(user_id=user_id).first()
+        """Set a setting value by key and optional user_id"""
+        setting = db_session.query(cls).filter(cls.key == key, cls.user_id == user_id).first()
         if setting:
             setting.value = value
         else:
             setting = cls(key=key, value=value, user_id=user_id)
             db_session.add(setting)
         db_session.commit()
-        return setting
+
+
+class Job(Base):
+    """Model for storing scheduled jobs"""
+    __tablename__ = 'jobs'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True, index=True)
+    module = Column(String(255), nullable=False)  # e.g., 'app'
+    function = Column(String(255), nullable=False)  # e.g., 'sync_mailbox'
+    interval_minutes = Column(Integer, nullable=False)
+    last_run_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Job {self.name}>"
+
+    @classmethod
+    def create(cls, name, module, function, interval_minutes):
+        """Create a new job"""
+        job = cls(
+            name=name,
+            module=module,
+            function=function,
+            interval_minutes=interval_minutes
+        )
+        db_session.add(job)
+        db_session.commit()
+        return job
+
+    @classmethod
+    def get_due_jobs(cls):
+        """Get all jobs that are due to run"""
+        now = datetime.datetime.utcnow()
+        return db_session.query(cls).filter(
+            cls.is_active == True,
+            (cls.last_run_at == None) | 
+            (func.extract('epoch', now - cls.last_run_at) >= cls.interval_minutes * 60)
+        ).all()
+
+    def run(self):
+        """Run the job and update last_run_at"""
+        try:
+            # Import the module and get the function
+            module = importlib.import_module(self.module)
+            func = getattr(module, self.function)
+            
+            # Run the function
+            func()
+            
+            # Update last_run_at
+            self.last_run_at = datetime.datetime.utcnow()
+            db_session.commit()
+            return True
+        except Exception as e:
+            print(f"Error running job {self.name}: {e}")
+            return False
 
 
 def setup_db():

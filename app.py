@@ -1,6 +1,5 @@
 from decouple import config
 from flask import Flask
-from flask_apscheduler import APScheduler
 from flask_migrate import Migrate
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill
@@ -18,38 +17,40 @@ import importlib
 from src.skills.perplexity import measure_perplexity_of_zettels
 from src.custom_types import SemanticContext
 
-def create_app():
-    app = Flask(__name__)
-    app.secret_key = os.urandom(24)
-    app.config['SQLALCHEMY_DATABASE_URI'] = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# def create_app():
+#     app = Flask(__name__)
+#     app.secret_key = os.urandom(24)
+#     app.config['SQLALCHEMY_DATABASE_URI'] = POSTGRES_DATABASE_URL.render_as_string(hide_password=False)
+#     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    db.init_app(app)
+#     db.init_app(app)
 
-    Migrate(app, db)
+#     Migrate(app, db)
 
-    @app.teardown_appcontext
-    def shutdown_session(exception=None):
-        db_session.remove()
+#     @app.teardown_appcontext
+#     def shutdown_session(exception=None):
+#         db_session.remove()
 
-    return [app, db]
+#     return [app, db]
 
-[app, db] = create_app()
+# [app, db] = create_app()
 
 
-# TODO: remove
-app.add_url_rule('/skills', view_func=src.views.skills.index)
+# # TODO: remove
+# app.add_url_rule('/skills', view_func=src.views.skills.index)
 
 
 def current_user():
-    return User.query.filter_by(name=config('ME')).first()
+    return AppSetting.get(key="desktop_user_id")
+    # return User.query.filter_by(name=config('ME')).first()
 
 def sync_mailbox():
-    # with app.app_context():
-    check_mailbox()
+    try:
+        check_mailbox()
+    except Exception as e:
+        print(f"Error checking mailbox: {e}")
 
 def send_enqueued_messages():
-    # with app.app_context():
     send_next_message_if_bandwidth_available()
 
 def ask_get_to_know_you():
@@ -60,41 +61,7 @@ def ponder_wittgenstein():
     PonderWittgensteinSkill.ponder_wittgenstein(current_user())
 
 def sync_local_docs():
-    # with app.app_context():
     FileManagementService().sync_documents_from_folder(LOCAL_DOCS_FOLDER, current_user())
-
-app.config['JOBS'] = [
-    {
-        'id': 'check_mailbox',
-        'func': 'app:sync_mailbox',
-        'trigger': 'interval',
-        'minutes': 17
-    },
-    {
-        'id': 'send_enqueued_messages',
-        'func': 'app:send_enqueued_messages',
-        'trigger': 'interval',
-        'minutes': 29
-    },
-    {
-        'id': 'sync_local_docs',
-        'func': 'app:sync_local_docs',
-        'trigger': 'interval',
-        'days': 1
-    },
-    # {
-    #     'id': 'ponder_wittgenstein',
-    #     'func': 'app:ponder_wittgenstein',
-    #     'trigger': 'interval',
-    #     'days': 2
-    # },
-    # {
-    #     'id': 'ask_get_to_know_you',
-    #     'func': 'app:ask_get_to_know_you',
-    #     'trigger': 'interval',
-    #     'days': 1
-    # }
-]
 
 # unwieldy. Move them all over to the streamlit app
 def register_all_routes():
@@ -110,19 +77,11 @@ def register_all_routes():
             except ImportError as e:
                 print(f"Could not import views for skill {skill}: {e}")
 
-app.add_url_rule('/', view_func=src.views.skills.index)
+# app.add_url_rule('/', view_func=src.views.skills.index)
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # For development only
     register_all_routes()
-    # scheduler = APScheduler()
-    # scheduler.init_app(app)
-    # scheduler.start()
-
-    # Function to shut down the scheduler
-    # @app.teardown_appcontext
-    # def shutdown_scheduler(exception=None):
-    #     scheduler.shutdown()
 
     with app.app_context():
         # ponder_wittgenstein()
@@ -134,4 +93,4 @@ if __name__ == '__main__':
         # for topic in topics:
         #     print(f"Speculating open questions for topic: {topic.name}")
         #     OpenQuestion.speculate_open_questions_from_topic(topic)
-        app.run(port=5000, debug=True, use_reloader=True)
+        # app.run(port=5000, debug=True, use_reloader=True)

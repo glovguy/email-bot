@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.utils import make_msgid
 import smtplib
 import uuid6
-from src.models import EmailOld, db_session
+from src.models import db_session
 
 UNREAD = ['UNSEEN']
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
@@ -44,36 +44,36 @@ class EmailInbox:
             # If something goes wrong, mark the email as unread again
             self.server.remove_flags(email_uid, ['\\Seen'])
 
-    def send_email(self, recipient, subject, body, parent_email=None, sender_email=None):
-        """Send an email to the specified recipient."""
-        msg = MIMEText(body)
-        msg['From'] = sender_email or EMAIL_ADDRESS
-        msg['To'] = recipient
-        msg['Subject'] = subject
-        message_id = make_msgid(str(uuid6.uuid7()), domain=EMAIL_DOMAIN) # f"<{}@{EMAIL_DOMAIN}>"
-        msg['Message-ID'] = message_id
-        thread_path = EmailOld.thread_path_from_parent(message_id, parent_email=parent_email)
-        if parent_email:
-            msg['In-Reply-To'] = parent_email.message_id
-            msg['References'] = parent_email.thread_path.replace('/',',')
+    # def send_email(self, recipient, subject, body, parent_email=None, sender_email=None):
+    #     """Send an email to the specified recipient."""
+    #     msg = MIMEText(body)
+    #     msg['From'] = sender_email or EMAIL_ADDRESS
+    #     msg['To'] = recipient
+    #     msg['Subject'] = subject
+    #     message_id = make_msgid(str(uuid6.uuid7()), domain=EMAIL_DOMAIN) # f"<{}@{EMAIL_DOMAIN}>"
+    #     msg['Message-ID'] = message_id
+    #     thread_path = EmailOld.thread_path_from_parent(message_id, parent_email=parent_email)
+    #     if parent_email:
+    #         msg['In-Reply-To'] = parent_email.message_id
+    #         msg['References'] = parent_email.thread_path.replace('/',',')
 
-        with self.email_session.connect_smtp(msg['From']) as server:
-            server.sendmail(msg['From'], [recipient], msg.as_string())
+    #     with self.email_session.connect_smtp(msg['From']) as server:
+    #         server.sendmail(msg['From'], [recipient], msg.as_string())
         
-        print(f"Sent email to {recipient} with subject '{subject}'")
-        email_instance = EmailOld(
-            sender=msg['From'],
-            recipients=[recipient],
-            subject=recipient,
-            content=body,
-            message_id=message_id,
-            thread_path=thread_path,
-            is_processed=1
-            # uid=??? # need to set up a way to figure out the uid
-        )
-        db_session.add(email_instance)
-        db_session.commit()
-        return email_instance
+    #     print(f"Sent email to {recipient} with subject '{subject}'")
+    #     email_instance = EmailOld(
+    #         sender=msg['From'],
+    #         recipients=[recipient],
+    #         subject=recipient,
+    #         content=body,
+    #         message_id=message_id,
+    #         thread_path=thread_path,
+    #         is_processed=1
+    #         # uid=??? # need to set up a way to figure out the uid
+    #     )
+    #     db_session.add(email_instance)
+    #     db_session.commit()
+    #     return email_instance
 
 
 class EmailSession:
