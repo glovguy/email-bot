@@ -1,6 +1,6 @@
 from anthropic import Anthropic
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from src.log_chat_messages import log_chat_messages
 
 # Set up logging

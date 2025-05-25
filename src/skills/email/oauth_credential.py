@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from google.oauth2.credentials import Credentials
-from src.models import db_session, Base
+from src.base import Base
+from src.models import db_session
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 
@@ -11,7 +12,7 @@ class OAuthCredential(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", back_populates="oauth_credential")
+    user = relationship("User", back_populates="oauth_credential", uselist=False)
     token = Column(Text, nullable=False)
     refresh_token = Column(String(512), nullable=True)
     token_uri = Column(String(512), nullable=False)
@@ -26,13 +27,13 @@ class OAuthCredential(Base):
         return f'<OAuthCredential user_id: {self.user_id} expiry: {self.expiry}>'
 
     @property
-    def is_expired(self):
-        if self.expiry:
-            return datetime.utcnow() > self.expiry
+    def is_expired(self) -> bool:
+        if self.expiry is not None:
+            return datetime.now(timezone.utc) > self.expiry
         return True
 
     @classmethod
-    def create_or_update(cls, user_id, credentials):
+    def create_or_update(cls, user_id: int, credentials: Credentials) -> 'OAuthCredential':
         credential = cls.query.filter_by(user_id=user_id).first()
         if credential:
             credential.token = credentials.token
@@ -58,12 +59,13 @@ class OAuthCredential(Base):
         db_session.commit()
         return credential
 
-    def to_credentials(self):
+    def to_credentials(self) -> Credentials:
+        scopes = json.loads(self.scopes) if self.scopes is not None else None
         return Credentials(
             token=self.token,
             refresh_token=self.refresh_token,
             token_uri=self.token_uri,
             client_id=self.client_id,
             client_secret=self.client_secret,
-            scopes=json.loads(self.scopes) if self.scopes else None
+            scopes=scopes
         )

@@ -1,7 +1,7 @@
 from .oauth_credential import OAuthCredential
 from .gmail_client import GmailClient
 from flask import Blueprint, request, redirect, session
-from src.models import User
+from src.user import User
 
 
 email_bp = Blueprint('email', __name__, url_prefix='/email')

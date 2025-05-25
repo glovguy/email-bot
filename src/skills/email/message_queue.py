@@ -17,9 +17,9 @@ class MessageQueue(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship('User', back_populates='message_queues')
+    user = relationship("User", back_populates="message_queues")
     created_at = Column(DateTime, default=func.now())
-    enqueued_messages = relationship('EnqueuedMessage', back_populates='queue')
+    enqueued_messages = relationship("EnqueuedMessage", back_populates="queue")
     user_attention_bandwidth_minutes = Column(Integer, nullable=False, default=120)
 
     def __repr__(self):
@@ -35,7 +35,7 @@ class MessageQueue(Base):
         return message_queue
 
     def send_next_message_if_bandwidth_available(self):
-        remaining_bandwidth = self.user_remaining_attention_bandwidth()
+        remaining_bandwidth = 12 #self.user_remaining_attention_bandwidth()
         print(f"Remaining bandwidth: {remaining_bandwidth}")
         next_message = self.get_next_message(estimated_time_threshold=remaining_bandwidth)
         if next_message:

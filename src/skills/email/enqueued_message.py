@@ -12,7 +12,7 @@ class EnqueuedMessage(Base):
     content = Column(Text, nullable=False)
     estimated_time = Column(Integer, nullable=False)  # in minutes
     queue_id = Column(Integer, ForeignKey('message_queues.id'), nullable=False)
-    queue = relationship('MessageQueue', back_populates='enqueued_messages')
+    queue = relationship("MessageQueue", back_populates='enqueued_messages')
     created_at = Column(DateTime, default=func.now())
     email_thread_id = Column(String(255), nullable=True)
     parent_message_id = Column(String(255), nullable=True)

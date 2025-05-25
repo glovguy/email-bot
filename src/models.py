@@ -1,18 +1,12 @@
 from decouple import config
 import re
 import numpy as np
-from email.utils import getaddresses
-from typing import Optional
-from pyzmail import PyzMessage
-from sqlalchemy import Boolean, create_engine, Column, Integer, String, DateTime, ForeignKey, func, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.engine.url import URL
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.sql import text, expression
 from sqlalchemy.types import UserDefinedType
-import datetime
-import importlib
-
+from src.base import Base
 
 EMAIL_ADDRESS = config('EMAIL_ADDRESS')
 POSTGRES_DATABASE_NAME = "bot_memory"
@@ -36,8 +30,6 @@ def init_session():
     return engine, db_session
 
 engine, db_session = init_session()
-
-Base = declarative_base()
 Base.query = db_session.query_property()
 
 class Vector(UserDefinedType):
@@ -93,207 +85,6 @@ def create_vector_extension():
     db_session.commit()
 
 
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True)
-    email_address = Column(String, unique=True, nullable=False)
-    name = Column(String(255), nullable=False)
-    oauth_credential = relationship("OAuthCredential", back_populates="user")
-    zettels = relationship("Zettel", back_populates="user")
-    topics = relationship("ZettelkastenTopic", back_populates="user")
-    message_queues = relationship("MessageQueue", back_populates="user")
-    emails = relationship("Email", back_populates="user")
-    contacts = relationship("Contact", back_populates="user")
-    hour_awake = Column(Integer, default=9) # when we would expect the user to read and respond to emails
-    hour_bedtime = Column(Integer, default=17)
-    open_questions = relationship("OpenQuestion", back_populates="user")
-    app_settings = relationship("AppSetting", back_populates="user")
-
-    def __repr__(self):
-        return f"<User(id={self.id}, name='{self.name}', email_address='{self.email_address}')>"
-
-def create_user(email_address, name, **kwargs):
-    user = User(
-        email_address=email_address,
-        name=name,
-        **kwargs,
-    )
-    db_session.add(user)
-    db_session.commit()
-    return user
-
-# deprecated
-class EmailOld:
-    """
-    Legacy email class, no longer mapped to database table.
-    Kept for compatibility with existing code.
-    """
-
-    id = Column(Integer, primary_key=True)
-    sender = Column(String, nullable=False)
-    recipients_csv = Column(String, nullable=False)
-    subject = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=func.now(), nullable=False)
-    thread_path = Column(String)
-    uid = Column(String) # UID from IMAP server
-    message_id = Column(String) # unique ID for each message, used by messages to refer to each other
-    sender_user_id = Column(Integer, ForeignKey('users.id'))
-    # sender_user = relationship("User", back_populates="emails_old")
-    is_processed = Column(Boolean, default=False, nullable=False)
-
-    def __repr__(self):
-        return f"<EmailOld(id={self.id}, uid={self.uid}, sender='{self.sender}', subject='{self.subject}')>"
-
-    @classmethod
-    def from_raw_email(cls, raw_email, email_uid):
-        """Parse a raw email and return an instance of the Email model."""
-        email = EmailOld.query.filter_by(uid=email_uid).first()
-        if email is not None:
-            print("Email entry already exists for uid ", email_uid, ". Skipping.")
-            return email
-
-        msg = PyzMessage.factory(raw_email[b'BODY[]'])
-        sender_user = User.query.filter_by(email_address=msg.get_address('from')[1]).first()
-        body = msg.text_part.get_payload().decode(msg.text_part.charset)
-        message_id = msg.get_decoded_header('message-id')
-        in_reply_to = msg.get_decoded_header('in-reply-to')
-        if in_reply_to:
-            # This is a hack for gmail, will need more general approach later
-            [*main_body, _] = body.split("\nOn ")
-            body = "\nOn ".join(main_body)
-        thread_path = EmailOld.thread_path_from_parent(message_id, in_reply_to=in_reply_to)
-        recipients = [recipient_tuple[1] for recipient_tuple in getaddresses(msg.get_all('to', []))]
-
-        email_instance = EmailOld(
-            sender=msg.get_address('from')[1],
-            recipients=recipients,
-            subject=msg.get_subject(),
-            content=body,
-            uid=email_uid,
-            sender_user_id=sender_user.id if sender_user else None,
-            message_id=message_id,
-            thread_path=thread_path
-        )
-        db_session.add(email_instance)
-        db_session.commit()
-
-        return email_instance
-
-    @classmethod
-    def thread_path_from_parent(cls, current_message_id, parent_email=None, in_reply_to=None):
-        print("current_message_id: ", current_message_id)
-        print("parent_email: ", parent_email)
-        print("in_reply_to: ", in_reply_to, type(in_reply_to))
-        if parent_email is None and in_reply_to == '':
-            return f"/{current_message_id}"
-
-        if in_reply_to != '':
-            parent_email = EmailOld.query.filter_by(message_id=in_reply_to).first()
-        if parent_email is not None:
-            print("Found parent email: ", parent_email)
-            return f"{parent_email.thread_path}/{current_message_id}"
-        return f"/{in_reply_to}/{current_message_id}"
-
-    def recipient_is_chat_address(self):
-        return EMAIL_ADDRESS in self.recipients
-
-    def email_chain(self):
-        msg_ids = [msg_id for msg_id in self.thread_path.split('/') if msg_id != '']
-        return EmailOld.query.filter(EmailOld.message_id.in_(msg_ids)).all()
-
-
-class AppSetting(Base):
-    """Model for storing application settings"""
-    __tablename__ = 'app_settings'
-
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255), nullable=False, unique=True, index=True)
-    value = Column(Text, nullable=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
-    user = relationship("User", back_populates="app_settings")
-
-    @classmethod
-    def get(cls, key: str, user_id: Optional[int] = None, default: Optional[str] = None) -> str | None:
-        """Get a setting value by key and optional user_id"""
-        setting = db_session.query(cls).filter(cls.key == key, cls.user_id == user_id).first()
-        return setting.value if setting else default
-
-    @classmethod
-    def set(cls, key: str, value: str, user_id: Optional[int] = None):
-        """Set a setting value by key and optional user_id"""
-        setting = db_session.query(cls).filter(cls.key == key, cls.user_id == user_id).first()
-        if setting:
-            setting.value = value
-        else:
-            setting = cls(key=key, value=value, user_id=user_id)
-            db_session.add(setting)
-        db_session.commit()
-
-
-class Job(Base):
-    """Model for storing scheduled jobs"""
-    __tablename__ = 'jobs'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False, unique=True, index=True)
-    module = Column(String(255), nullable=False)  # e.g., 'app'
-    function = Column(String(255), nullable=False)  # e.g., 'sync_mailbox'
-    interval_minutes = Column(Integer, nullable=False)
-    last_run_at = Column(DateTime, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
-    def __repr__(self):
-        return f"<Job {self.name}>"
-
-    @classmethod
-    def create(cls, name, module, function, interval_minutes):
-        """Create a new job"""
-        job = cls(
-            name=name,
-            module=module,
-            function=function,
-            interval_minutes=interval_minutes
-        )
-        db_session.add(job)
-        db_session.commit()
-        return job
-
-    @classmethod
-    def get_due_jobs(cls):
-        """Get all jobs that are due to run"""
-        now = datetime.datetime.utcnow()
-        return db_session.query(cls).filter(
-            cls.is_active == True,
-            (cls.last_run_at == None) | 
-            (func.extract('epoch', now - cls.last_run_at) >= cls.interval_minutes * 60)
-        ).all()
-
-    def run(self):
-        """Run the job and update last_run_at"""
-        try:
-            # Import the module and get the function
-            module = importlib.import_module(self.module)
-            func = getattr(module, self.function)
-            
-            # Run the function
-            func()
-            
-            # Update last_run_at
-            self.last_run_at = datetime.datetime.utcnow()
-            db_session.commit()
-            return True
-        except Exception as e:
-            print(f"Error running job {self.name}: {e}")
-            return False
-
-
 def setup_db():
     print("running setup!")
     # Create database if it doesn't exist
@@ -306,6 +97,16 @@ def setup_db():
         pass
     conn.close()
     temp_engine.dispose()
+
+    # Import all models to ensure they're registered with SQLAlchemy
+    from src.user import User
+    from src.skills.email.oauth_credential import OAuthCredential
+    from src.skills.email.email import Email
+    from src.skills.email.message_queue import MessageQueue
+    from src.skills.email.enqueued_message import EnqueuedMessage
+    from src.app_setting import AppSetting
+    from src.skills.social_stockfish.models import Contact
+
     # Create models
     Base.metadata.create_all(bind=engine)
     create_vector_extension()

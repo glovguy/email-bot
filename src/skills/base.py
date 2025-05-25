@@ -21,6 +21,8 @@ chroma_client = chromadb.PersistentClient(
 default_embeddings_model = INSTRUCTOR('hkunlp/instructor-base')
 
 class SkillBase(object):
+    "deprecated base class, do not use in new features"
+    # deprecated, do not use
     llm_client = OpenAIClient()
     # email_inbox = EmailInbox()
 

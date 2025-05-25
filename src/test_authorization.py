@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import unittest
 from unittest.mock import patch
+from src.user import User
 import models
 import src.authorization
 from src.authorization import Authorization
@@ -26,7 +27,7 @@ class TestAuthorizationService(unittest.TestCase):
     def test_verify_valid_user(self):
         # Given a user in our database
         valid_address = "valid_user@example.com"
-        user = models.User(name="John Test", email_address=valid_address)
+        user = user.User(name="John Test", email_address=valid_address)
         self.session.add(user)
         self.session.commit()
         

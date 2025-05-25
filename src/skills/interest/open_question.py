@@ -1,8 +1,8 @@
-import json
 from typing import List
 from decouple import config
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, Index, event
 from sqlalchemy.orm import relationship
+from src.skills.email.email import Email
 from src.skills.base import default_embeddings_model
 from src.models import Base, Vector, db_session
 from src.skills.email.message_queue import MessageQueue
@@ -110,7 +110,7 @@ email_response_tool_specs = [
     }
 ]
 
-def handle_open_question_user_response(email):
+def handle_open_question_user_response(email: Email):
     print("handling email! email.to_email_address: ", email.to_email_address)
     if email.to_email_address != BOT_EMAIL_ADDRESS or email.from_email_address == BOT_EMAIL_ADDRESS:
         print("email not sent to bot, skipping")

@@ -19,12 +19,13 @@ class ConversationHistory(Base):
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", backref="conversation_histories")
+    user = relationship("User", back_populates="conversation_histories")
     messages = Column(JSON, nullable=False)  # Stores the full conversation as a list of message objects
     source = Column(String(255), nullable=True)  # Where the conversation was imported from
 
     objectives = relationship("Objective", back_populates="conversation_history", cascade="all, delete-orphan")
     simulations = relationship("Simulation", back_populates="conversation_history", cascade="all, delete-orphan")
+    selected_approach = relationship("SelectedApproach", back_populates="conversation_history", uselist=False)
 
     def __repr__(self) -> str:
         return f'<ConversationHistory id: {self.id} title: {self.title}>'
@@ -123,7 +124,7 @@ class SelectedApproach(Base):
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
     conversation_history_id = Column(Integer, ForeignKey("conversation_histories.id"), nullable=False, unique=True)
-    conversation_history = relationship("ConversationHistory", backref="selected_approach", uselist=False)
+    conversation_history = relationship("ConversationHistory", back_populates="selected_approach", uselist=False)
     simulation_id = Column(Integer, ForeignKey("simulations.id"), nullable=False)
     simulation = relationship("Simulation")
     rationale = Column(Text, nullable=True)  # Explanation for why this approach was selected
@@ -142,6 +143,7 @@ class Contact(Base):
     identifier_type = Column(String(50), nullable=False)  # 'phone' or 'email'
     normalized_identifier = Column(String(255), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship("User", back_populates="contacts")
     created_at = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
     updated_at = Column(DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
     

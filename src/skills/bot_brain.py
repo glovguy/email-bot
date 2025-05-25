@@ -23,40 +23,40 @@ metadata
 '''
 
 class BotBrain(DocumentsBase):
-    @classmethod
-    def get_relevant_documents(cls, namespace, doc_strings, where, n_results=5, include=['documents']):
-        results = botbrain_collection.query(
-            query_texts=doc_strings,
-            n_results=n_results,
-            where={ "$and": [ {**where}, {"namespace": namespace}] },
-            where_document={},
-            include=include
-        )
-        return results
+    # @classmethod
+    # def get_relevant_documents(cls, namespace, doc_strings, where, n_results=5, include=['documents']):
+    #     results = botbrain_collection.query(
+    #         query_texts=doc_strings,
+    #         n_results=n_results,
+    #         where={ "$and": [ {**where}, {"namespace": namespace}] },
+    #         where_document={},
+    #         include=include
+    #     )
+    #     return results
 
-    @classmethod
-    def add_document(cls, namespace, doc_string, metadata={}):
-        if doc_string == '' or metadata.get('user_id') is None:
-            return
+    # @classmethod
+    # def add_document(cls, namespace, doc_string, metadata={}):
+    #     if doc_string == '' or metadata.get('user_id') is None:
+    #         return
 
-        keys_to_keep = ['user_id', 'title']
-        metad = {k: metadata[k] for k in keys_to_keep if k in metadata}
-        uuid = cls.generate_uuid()
-        sha = cls.doc_sha(doc_string)
-        now = cls.now_str()
-        meta = {
-            **metad,
-            "namespace": namespace,
-            "sha": sha,
-            "created_at": now,
-            "last_modified_at": now,
-        }
-        botbrain_collection.add(
-            documents=[doc_string],
-            metadatas=[meta],
-            ids=[uuid]
-        )
-        return uuid
+    #     keys_to_keep = ['user_id', 'title']
+    #     metad = {k: metadata[k] for k in keys_to_keep if k in metadata}
+    #     uuid = cls.generate_uuid()
+    #     sha = cls.doc_sha(doc_string)
+    #     now = cls.now_str()
+    #     meta = {
+    #         **metad,
+    #         "namespace": namespace,
+    #         "sha": sha,
+    #         "created_at": now,
+    #         "last_modified_at": now,
+    #     }
+    #     botbrain_collection.add(
+    #         documents=[doc_string],
+    #         metadatas=[meta],
+    #         ids=[uuid]
+    #     )
+    #     return uuid
 
     @classmethod
     def get_document(cls, namespace, uuid=None, **kwargs):

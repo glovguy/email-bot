@@ -1,3 +1,4 @@
+import importlib
 from src.models import db_session, Base
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
@@ -39,26 +40,31 @@ class EmailEventBus:
         print(f"Dispatching email with thread_id: {email.thread_id}")
         listener = db_session.query(EmailCommandListener).filter_by(gmail_thread_id=email.thread_id).first()
         if listener:
-            try:
-                module_name, function_name = listener.listener_function.rsplit('.', 1)
-                module = __import__(module_name, fromlist=[function_name])
-                listener_fn = getattr(module, function_name)
-
-                listener_fn(email)
-
-                email.is_processed = True
-                db_session.commit()
-            except Exception as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                logging.error("Error dispatching email:")
-                logging.error(f"Exception type: {exc_type.__name__}")
-                logging.error(f"Exception message: {str(e)}")
-                logging.error("Traceback:")
-                logging.error(traceback.format_exc())
+            module_name, function_name = listener.listener_function.rsplit('.', 1)
         else:
-            print(f"No listener found for email thread {email.thread_id}")
+            module_name, function_name = "src.skills.email", "default_listener"
+        print(f"Dispatching email with listener: {module_name}.{function_name}")
+        try:
+            module = importlib.import_module(module_name)
+            listener_fn = getattr(module, function_name)
+            # module = __import__(module_name, fromlist=[function_name])
+            # listener_fn = getattr(module, function_name)
+
+            listener_fn(email)
+
             email.is_processed = True
             db_session.commit()
+        except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logging.error("Error dispatching email:")
+            logging.error(f"Exception type: {exc_type.__name__}")
+            logging.error(f"Exception message: {str(e)}")
+            logging.error("Traceback:")
+            logging.error(traceback.format_exc())
+        # else:
+            # print(f"No listener found for email thread {email.thread_id}")
+            # email.is_processed = True
+            # db_session.commit()
 
     @classmethod
     def process_unhandled_emails(cls):

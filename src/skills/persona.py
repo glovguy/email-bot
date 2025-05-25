@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String
-from src.models import Base, User
+from src.user import User
+from src.models import Base
 from src.custom_types import SemanticContext
 
 class Persona(Base):
