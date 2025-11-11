@@ -17,7 +17,7 @@ class AppSetting(Base):
     key = Column(String(255), nullable=False, unique=True, index=True)
     value = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    user = relationship("User", back_populatess="app_settings")
+    user = relationship("User", back_populates="app_settings")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

@@ -3,7 +3,7 @@ import datetime
 from typing import List
 from src.event_bus import register_event_listener
 from src.skills.zettelkasten_skill import Zettelkasten
-from src.skills.email import Email
+from src.skills.email_skill import Email
 # from src.models import EmailOld
 
 from src.skills.base import SkillBase, email_chain_to_prompt_messages

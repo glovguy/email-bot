@@ -4,7 +4,7 @@ import platform
 import pandas as pd
 
 from src.models import db_session, User, AppSetting # type: ignore
-from src.skills.email import OAuthCredential # type: ignore
+from src.skills.email_skill import OAuthCredential # type: ignore
 from src.skills.zettel import zettel # type: ignore
 from src.skills.interest import OpenQuestion # type: ignore
 from src.skills.social_stockfish.models import Contact

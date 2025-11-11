@@ -14,8 +14,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.models import *
 from src.skills.persona import *
-from src.skills.email import *
-from src.skills.email.oauth_credential import *
+from src.skills.email_skill import *
+from src.skills.email_skill.oauth_credential import *
 from src.skills.zettel import *
 from src.skills.interest import *
 from src.skills.social_stockfish.models import *

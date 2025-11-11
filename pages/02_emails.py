@@ -1,5 +1,5 @@
 import streamlit as st
-from src.skills.email import Email
+from src.skills.email_skill import Email
 from src.skills.zettel import Zettel
 from src.skills.interest import OpenQuestion
 

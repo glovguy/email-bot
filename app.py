@@ -12,9 +12,9 @@ from src.skills.interest import OpenQuestion
 import src.views.skills
 import os
 from src.models import *
-from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
+from src.skills.email_skill import check_mailbox, send_next_message_if_bandwidth_available
 import importlib
-from src.skills.perplexity import measure_perplexity_of_zettels
+from src.skills.perplexity_measurement import measure_perplexity_of_zettels
 from src.custom_types import SemanticContext
 
 # def create_app():

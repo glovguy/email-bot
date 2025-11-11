@@ -31,12 +31,16 @@ class Email(Base):
     def from_raw_gmail(cls, raw_email, user_id):
         payload = raw_email["payload"]
         headers = payload["headers"]
+        print(f"headers: {headers}")
+        from_email_address = next((p["value"] for p in headers if p["name"].lower() == "from"))
+        if "<" in from_email_address:
+            from_email_address = from_email_address.split("<")[1].split(">")[0]
         email_instance = Email(
             user_id=user_id,
             gmail_id=raw_email["id"],
             thread_id=raw_email["threadId"],
             snippet=raw_email["snippet"],
-            from_email_address=next((p["value"] for p in headers if p["name"].lower() == "from")),
+            from_email_address=from_email_address,
             to_email_address=next((p["value"] for p in headers if p["name"].lower() == "to")),
             subject=next((p["value"] for p in headers if p["name"].lower() == "subject")),
             history_id=raw_email["historyId"],

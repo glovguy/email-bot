@@ -12,7 +12,7 @@ from sqlalchemy import Boolean, Column, Integer, String, DateTime, func
 
 from src.skills.zettel import sync_local_docs
 from src.models import Base, db_session
-from src.skills.email.jobs import check_mailbox, send_next_message_if_bandwidth_available
+from src.skills.email_skill.jobs import check_mailbox, send_next_message_if_bandwidth_available
 
 # Configure logging
 logger = logging.getLogger(__name__)

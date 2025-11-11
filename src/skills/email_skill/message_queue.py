@@ -99,7 +99,7 @@ class MessageQueue(Base):
 
         return max(0, remaining_bandwidth)
 
-    def _calculate_weighted_time(self, message, now, hour_awake, hour_bedtime):
+    def _calculate_weighted_time(self, message: EnqueuedMessage, now: datetime, hour_awake: int, hour_bedtime: int):
         hours_since_sent = (now - message.sent_at).total_seconds() / 3600
         decay_factor = math.exp(-hours_since_sent / 6)  # Half-life of 6 hours
 
@@ -108,7 +108,7 @@ class MessageQueue(Base):
 
         return message.estimated_time * decay_factor * (waking_hours / hours_since_sent)
 
-    def _count_waking_hours(self, start, end, hour_awake, hour_bedtime):
+    def _count_waking_hours(self, start: datetime, end: datetime, hour_awake: int, hour_bedtime: int):
         waking_hours = 0
         current = start
         while current <= end:
@@ -117,7 +117,8 @@ class MessageQueue(Base):
             current += timedelta(hours=1)
         return waking_hours
 
-    def send_enqueued_message(self, enqueued_message):
+    def send_enqueued_message(self, enqueued_message: EnqueuedMessage):
+        print(f"Sending enqueued message with id: {enqueued_message.id}")
         gmail_response = GmailClient(user_id=self.user_id).send_message(enqueued_message)
         thread_id = gmail_response['threadId']
         EmailEventBus.register_listener(thread_id, enqueued_message.response_listener)

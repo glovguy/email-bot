@@ -1,9 +1,10 @@
+import asyncio
 from src.user import User
 from src.models import db_session
-from src.skills.email.email_event_bus import EmailEventBus
-from src.skills.email.gmail_client import GmailClient
-from src.skills.email.message_queue import MessageQueue
-from src.skills.email.oauth_credential import OAuthCredential
+from src.skills.email_skill.email_event_bus import EmailEventBus
+from src.skills.email_skill.gmail_client import GmailClient
+from src.skills.email_skill.message_queue import MessageQueue
+from src.skills.email_skill.oauth_credential import OAuthCredential
 
 
 def send_next_message_if_bandwidth_available():
@@ -21,4 +22,4 @@ def check_mailbox():
     for user in users_with_credentials:
         gmail_client = GmailClient(user_id=user.id)
         gmail_client.fetch_emails_full_sync()
-    EmailEventBus.process_unhandled_emails()
+    asyncio.run(EmailEventBus.process_unhandled_emails())

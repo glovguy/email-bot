@@ -7,10 +7,9 @@ It should be run every minute by a cron job or similar scheduler.
 """
 
 import logging
-from src.models import setup_db
+from src.models import setup_db, db_session
 from src.job import Job
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -21,7 +20,10 @@ logging.basicConfig(
 )
 
 if __name__ == "__main__":
-    # Ensure database is set up
     setup_db()
-    # Run jobs
-    Job.run_jobs() 
+    Job.run_jobs()
+    # job1 = db_session.query(Job).filter(Job.name == "check_mailbox").first()
+    # job1.run()
+    job2 = db_session.query(Job).filter(Job.name == "send_enqueued_messages").first()
+    if job2:
+        job2.run()

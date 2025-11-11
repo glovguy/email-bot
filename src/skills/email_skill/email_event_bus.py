@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 from src.models import db_session, Base
 from sqlalchemy import Column, Integer, String, DateTime
@@ -36,7 +37,7 @@ class EmailEventBus:
         db_session.commit()
 
     @classmethod
-    def dispatch_email(cls, email: Email):
+    async def dispatch_email(cls, email: Email):
         print(f"Dispatching email with thread_id: {email.thread_id}")
         listener = db_session.query(EmailCommandListener).filter_by(gmail_thread_id=email.thread_id).first()
         if listener:
@@ -48,9 +49,12 @@ class EmailEventBus:
             module = importlib.import_module(module_name)
             listener_fn = getattr(module, function_name)
             # module = __import__(module_name, fromlist=[function_name])
-            # listener_fn = getattr(module, function_name)
+            listener_fn = getattr(module, function_name)
 
-            listener_fn(email)
+            if asyncio.iscoroutinefunction(listener_fn):
+                await listener_fn(email)
+            else:
+                listener_fn(email)
 
             email.is_processed = True
             db_session.commit()
@@ -67,7 +71,7 @@ class EmailEventBus:
             # db_session.commit()
 
     @classmethod
-    def process_unhandled_emails(cls):
+    async def process_unhandled_emails(cls):
         unprocessed_emails = db_session.query(Email).filter_by(is_processed=False).all()
         for email in unprocessed_emails:
-            EmailEventBus.dispatch_email(email)
+            await EmailEventBus.dispatch_email(email)

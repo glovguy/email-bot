@@ -6,7 +6,7 @@ import streamlit as st
 
 from src.models import User
 from src.skills.interest import OpenQuestion
-from src.skills.email import check_mailbox, send_next_message_if_bandwidth_available
+from src.skills.email_skill import check_mailbox, send_next_message_if_bandwidth_available
 from src.skills.readwise_discourse import fetch_and_discuss_latest_readwise
 from src.skills.ponder_wittgenstein_skill import PonderWittgensteinSkill
 from src.skills.get_to_know_you_skill import GetToKnowYouSkill

@@ -1,7 +1,7 @@
 import streamlit as st
 from src.models import *
 from src.skills.persona import Persona
-from src.skills.email import *
+from src.skills.email_skill import *
 from src.skills.zettel import *
 from src.skills.interest import *
 

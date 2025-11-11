@@ -1,6 +1,4 @@
-
-
-from src.skills.email import email, oauth_credential
+from src.skills.email_skill import email, oauth_credential
 from src.skills.interest import OpenQuestion
 import streamlit as st
 from src.skills.zettel import Zettel

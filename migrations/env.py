@@ -16,7 +16,7 @@ from alembic import context
 # Import Base and all models
 from src.models import Base
 from src.skills.persona import *
-from src.skills.email import *
+from src.skills.email_skill import *
 from src.skills.zettel import *
 from src.skills.interest import *
 # Import any other models here...

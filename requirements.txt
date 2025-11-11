@@ -1,6 +1,7 @@
 anthropic==0.36.0
 chromadb==0.4.14
 email-reply-parser==0.5.12
+fastmcp==2.5.2
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.0.7

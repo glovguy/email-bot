@@ -100,10 +100,10 @@ def setup_db():
 
     # Import all models to ensure they're registered with SQLAlchemy
     from src.user import User
-    from src.skills.email.oauth_credential import OAuthCredential
-    from src.skills.email.email import Email
-    from src.skills.email.message_queue import MessageQueue
-    from src.skills.email.enqueued_message import EnqueuedMessage
+    from src.skills.email_skill.oauth_credential import OAuthCredential
+    from src.skills.email_skill.email import Email
+    from src.skills.email_skill.message_queue import MessageQueue
+    from src.skills.email_skill.enqueued_message import EnqueuedMessage
     from src.app_setting import AppSetting
     from src.skills.social_stockfish.models import Contact
 
