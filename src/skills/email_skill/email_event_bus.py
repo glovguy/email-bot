@@ -43,7 +43,7 @@ class EmailEventBus:
         if listener:
             module_name, function_name = listener.listener_function.rsplit('.', 1)
         else:
-            module_name, function_name = "src.skills.email", "default_listener"
+            module_name, function_name = "src.skills.email_skill", "default_listener"
         print(f"Dispatching email with listener: {module_name}.{function_name}")
         try:
             module = importlib.import_module(module_name)
