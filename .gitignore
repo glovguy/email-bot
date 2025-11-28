@@ -175,3 +175,6 @@ documents_collection/
 chat_logs/
 data/
 exports/
+
+.vscode/
+.cursor/
